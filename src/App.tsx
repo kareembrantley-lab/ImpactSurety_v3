@@ -1,1152 +1,407 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  ChevronDown, 
-  ChevronRight, 
-  Search, 
-  Info,
-  ArrowRight,
-  ShieldCheck,
-  Lock,
-  Download
-} from 'lucide-react';
+import React, { useState } from "react";
 
-const DEMO_DATA = {
-  "label": "Illustrative example - fictional company. Not a real verification.",
-  "cover": {
-    "company": "Northwind HVAC Services, LLC",
-    "mark": "Evidence-Complete (Part A) + Spend-Complete (Part B); Parts C-D scoped",
-    "assessed_coverage_pct": 86,
-    "disclosed_conditions": 13,
-    "limits": "Census means provided records, not reality. We verify 100% of the records you provide and the sources you authorize - establishing their completeness, consistency, and traceability to source. We are not a fraud examination and not an assurance opinion."
-  },
-  "partA": [
-    {
-      "figure": "$83,404 unreconciled",
-      "grade": "B",
-      "recoverable": true,
-      "fact": "One operating account went unreconciled to the general ledger for three months; the variance is traced and quantified.",
-      "area": "ORS area 1 - Proof of cash",
-      "threshold": "Proof-of-cash variance > 0.05% / month",
-      "id": "P6"
-    },
-    {
-      "figure": "~$210,000 moved",
-      "grade": "C",
-      "recoverable": false,
-      "fact": "Manual top-side journal entries posted within three days of year-end shifted roughly $210,000 of income into the earlier period.",
-      "area": "ORS area 5 - Period-end entries",
-      "threshold": "Unsupported period-end entries (Grade C/D cluster)",
-      "id": "P7"
-    },
-    {
-      "figure": "$785,000 debt-like",
-      "grade": "B",
-      "recoverable": false,
-      "fact": "Accrued bonuses and deferred service revenue are debt-like but do not appear in the net-debt summary.",
-      "area": "ORS area 11 - Debt-like items bridge",
-      "threshold": "Debt-like items omitted from net-debt view",
-      "id": "P13"
-    },
-    {
-      "figure": "+14.8% largest swing",
-      "grade": "A",
-      "recoverable": false,
-      "fact": "Working capital swings more than 12% month-to-month with summer cooling demand; a seasonal peg is required to read it.",
-      "area": "ORS area 10 - Seasonal working capital",
-      "threshold": "Seasonal working-capital peg required",
-      "id": "P11"
-    },
-    {
-      "id": "A-payroll",
-      "grade": "A",
-      "fact": "Payroll taxes were remitted on time and tie to the filed returns for all twenty-four months.",
-      "area": "ORS area 13 - Payroll tax"
-    }
-  ],
-  "partB": [
-    {
-      "figure": "$18,240",
-      "grade": "A",
-      "recoverable": true,
-      "fact": "Invoice #4471 from a vendor was paid twice, 6 days apart.",
-      "area": "ORS area 16 - Duplicate payments",
-      "threshold": "Duplicate >= 0.1% of annual spend",
-      "id": "P1"
-    },
-    {
-      "figure": "$14,500",
-      "grade": "A",
-      "recoverable": true,
-      "fact": "A vendor credit memo was issued but never applied to a later invoice.",
-      "area": "ORS area 16 - Unapplied credits",
-      "threshold": "Unapplied credits >= $10,000",
-      "id": "P2"
-    },
-    {
-      "figure": "$96,000 / yr",
-      "grade": "B",
-    "recoverable": false,
-      "fact": "A vendor contract renews automatically each year with a 7% price escalator.",
-      "area": "ORS area 19 - Auto-renewing commitments",
-      "threshold": "Auto-renewing commitments >= 5% of annual spend",
-      "id": "P3"
-    },
-    {
-      "figure": "~28% / $3.9M",
-      "grade": "A",
-      "recoverable": false,
-      "fact": "One customer is about 28% of trailing-twelve-month revenue.",
-      "area": "ORS area 3 / 19 - Customer concentration",
-      "threshold": "Concentration >= 20%",
-      "id": "P4"
-    },
-    {
-      "figure": "$3,100 / mo",
-      "grade": "B",
-      "recoverable": false,
-      "fact": "A signed equipment-lease obligation has no matching entry in the ledger or payables - an unrecorded payable.",
-      "area": "ORS area 19 vs 11 - Commitment-to-ledger gap",
-      "threshold": "Unrecorded payable (commitment-to-ledger gap)",
-      "id": "P5"
-    },
-    {
-      "figure": "$90,000 / yr",
-      "grade": "B",
-      "recoverable": false,
-      "fact": "A consulting vendor paid monthly is the owner's spouse; no contract is on file.",
-      "area": "ORS area 7 / 16 - Related-party flows",
-      "threshold": "Related-party flows of any size",
-      "id": "P8"
-    },
-    {
-      "figure": "3 vehicles / 18 mo",
-      "grade": "B",
-      "recoverable": false,
-      "fact": "3 service vehicles past useful life show no repair-and-maintenance spend for eighteen months.",
-      "area": "ORS area 22 (LMM) - Deferred maintenance",
-      "threshold": "Facilities / capital deferred-maintenance fact",
-      "id": "P9"
-    },
-    {
-      "figure": "4 contractors",
-      "grade": "B",
-      "recoverable": false,
-      "fact": "4 contractors paid a fixed monthly amount for more than six months follow a full-time work pattern; classification is shown as filed.",
-      "area": "ORS area 12 / 23 - Labor classification",
-      "threshold": "Classification facts as filed",
-      "id": "P10"
-    }
-  ],
-  "partsCD": [
-    {
-      "figure": "Consent required",
-      "grade": "B",
-      "recoverable": false,
-      "fact": "A material customer contract requires the customer's written consent before a change of control.",
-      "area": "ORS area 32 (Part D) - Change-of-control consent",
-      "threshold": "Consent-to-sell held by a non-signing party",
-      "id": "P12"
-    },
-    {
-      "id": "A-captable",
-      "grade": "A",
-      "fact": "The capitalization table reconciles to 100% of the issuance documents; ownership is fully accounted.",
-      "area": "ORS area 29 (Part D) - Cap table"
-    }
-  ],
-  "gradeE": [
-    {
-      "id": "E1",
-      "grade": "E",
-      "reason": "R1 - sale confidentiality",
-      "fact": "Not assessed - access logs / training records not collected",
-      "area": "ORS area 25-26 (C)"
-    },
-    {
-      "id": "E2",
-      "grade": "E",
-      "reason": "R4 - consent withheld",
-      "fact": "Not assessed - communications-metadata analysis not run",
-      "area": "ORS area 26 (C)"
-    },
-    {
-      "id": "E3",
-      "grade": "E",
-      "reason": "R5 - third party declined",
-      "fact": "Not assessed - landlord refused to confirm lease terms",
-      "area": "ORS area 22 (B)"
-    }
-  ],
-  "index_count": 13,
-  "gradeE_schedule": "Not assessed: R1x1, R4x1, R5x1",
-  "close": "This is the record a buyer's accountant would rebuild - already built, already sourced. There is nothing here left to find."
+/* =====================================================================
+   IMPACT SURETY — single-page marketing site (Website Prompt v1.5)
+   Owner is the hero; advisor is the most-prepared guide; the demo FactBook
+   is the centerpiece. M3 arc: brace -> work -> why -> exhale -> ask.
+   The Demo FactBook is embedded; the hero CTA scrolls to it.
+   Demo content equals the engine-derived demo_factbook.json (validated).
+   ===================================================================== */
+
+const LABEL = "Illustrative example — fictional company. Not a real verification.";
+const CALENDAR_URL = "https://calendar.app.google/cNchrTCDrX5XrEpL9";
+const LIMITS =
+  "Census means provided records, not reality. We verify 100% of the records you provide and the sources you authorize — establishing their completeness, consistency, and traceability to source. We are not a fraud examination and not an assurance opinion. Stating this limit is the boundary that makes everything inside it checkable.";
+const GRADE_GLOSS =
+  "An evidence grade rates how well the evidence backs a fact — it grades the proof, never your business.";
+
+const gradeChip: Record<string, string> = {
+  A: "bg-blue-950 text-white", B: "bg-blue-800 text-white",
+  C: "bg-slate-600 text-white", D: "bg-slate-400 text-white",
+  E: "bg-white text-slate-500 border border-dashed border-slate-400",
 };
 
-const GradeBadge = ({ grade }: { grade: string }) => {
-  const styles: Record<string, string> = {
-    'A': 'text-zinc-600',
-    'B': 'text-zinc-500',
-    'C': 'text-zinc-400',
-    'D': 'text-zinc-400',
-    'E': 'text-zinc-400',
-  };
-  
-  return (
-    <span className={`px-2 py-[2px] text-[10px] font-mono tracking-widest uppercase border border-zinc-200 ${styles[grade] || styles.E} shrink-0`}>
-      Grade {grade}
-    </span>
-  );
-};
+/* ---------------- Demo FactBook content (= demo_factbook.json) ---------------- */
+const partA = [
+  { id:"P6", grade:"B", recoverable:true, fact:"One operating account went unreconciled to the general ledger for three months; the variance is traced and quantified.", figure:"$83,400 unreconciled", area:"ORS area 1 — Proof of cash", threshold:"Proof-of-cash variance > 0.05% / month",
+    source:{ label:"Bank statement — Account ••4471 · Jul–Sep 2024", lines:["GL cash (1010) balance, 9/30/24 .......... 1,204,338.10","Bank statement closing, 9/30/24 .......... 1,287,742.55","Unreconciled difference .......................... 83,404.45","Reconciliation last completed ................ 6/30/24"] } },
+  { id:"P7", grade:"C", recoverable:false, fact:"Three manual top-side journal entries posted within three days of year-end shifted roughly $210,000 of income into the earlier period.", figure:"≈ $210,000 moved", area:"ORS area 5 — Period-end entries", threshold:"Unsupported period-end entries (Grade C/D cluster)",
+    source:{ label:"GL journal — JE-1188 / JE-1190 / JE-1192 · Dec 29–31, 2024", lines:["JE-1188 12/29/24  Cr Revenue 92,000   memo: (none)","JE-1190 12/30/24  Cr Revenue 64,500   memo: (none)","JE-1192 12/31/24  Cr Revenue 53,500   memo: (none)","Supporting documentation ............... not attached"] } },
+  { id:"P13", grade:"B", recoverable:false, fact:"Accrued bonuses and deferred service revenue are debt-like but do not appear in the company’s net-debt summary.", figure:"$785,000 debt-like", area:"ORS area 11 — Debt-like items bridge", threshold:"Debt-like items omitted from net-debt view",
+    source:{ label:"GL accounts 2300 / 2400 · Mar 2025; management net-debt schedule", lines:["Accrued bonuses (2300), 3/31/25 ........ 420,000.00","Deferred service revenue (2400) ........ 365,000.00","Management net-debt schedule ........... neither line included"] } },
+  { id:"P11", grade:"A", recoverable:false, fact:"Working capital swings more than 12% month-to-month with summer cooling demand; a seasonal peg is required to read it.", figure:"+14.8% largest swing", area:"ORS area 10 — Seasonal working capital", threshold:"Seasonal working-capital peg required",
+    source:{ label:"36-month monthly balance sheet; AR / AP / inventory roll-forward", lines:["Net working capital, Jan 2024 ........... 1,910,220","Net working capital, Jul 2024 ........... 2,664,880  (+39.5% vs Jan)","Largest month-over-month swing ......... +14.8%  (May→Jun 2024)"] } },
+  { id:"A-clean", grade:"A", recoverable:false, clean:true, fact:"Payroll taxes were remitted on time and tie to the filed returns for all twenty-four months.", figure:"Clean — 24 / 24 months", area:"ORS area 13 — Payroll tax", threshold:"—",
+    source:{ label:"Form 941 filings Q1 2023–Q4 2024; payroll register; bank debits", lines:["2023 Q1–Q4 941s ......... filed, tied to register","2024 Q1–Q4 941s ......... filed, tied to register","Late deposits ............... none identified"] } },
+];
+const partB = [
+  { id:"P1", grade:"A", recoverable:true, fact:"Invoice #4471 from Cascade Supply was paid twice, six days apart.", figure:"$18,240", area:"ORS area 16 — Duplicate payments", threshold:"Duplicate ≥ 0.1% of annual spend",
+    source:{ label:"AP payments PMT-2207 & PMT-2261 · Aug 2024", lines:["PMT-2207 8/12/24  Cascade Supply  inv #4471 .... 18,240.00","PMT-2261 8/18/24  Cascade Supply  inv #4471 .... 18,240.00","Same invoice #, same amount, 6 days apart"] } },
+  { id:"P2", grade:"A", recoverable:true, fact:"A vendor credit memo from Pacific Parts was issued but never applied to a later invoice.", figure:"$14,500", area:"ORS area 16 — Unapplied credits", threshold:"Unapplied credits ≥ $10,000",
+    source:{ label:"Credit memo CM-0934 · Feb 2024", lines:["CM-0934 2/09/24  Pacific Parts  credit ......... 14,500.00","Pacific Parts invoices Mar–Dec 2024 ........... no offset applied","Open credit balance carried .................... 14,500.00"] } },
+  { id:"P3", grade:"B", recoverable:false, fact:"The dispatch-software contract renews automatically each year with a 7% price escalator.", figure:"$96,000 / yr", area:"ORS area 19 — Auto-renewing commitments", threshold:"Auto-renewing commitments ≥ 5% of annual spend",
+    source:{ label:"FieldRoute SaaS agreement §6.2, §6.4", lines:["§6.2  Auto-renews for successive 12-month terms unless","       cancelled 90 days prior","§6.4  Annual price increase of 7%","Current annual value .......................... 96,000.00"] } },
+  { id:"P4", grade:"A", recoverable:false, fact:"One customer, Cascade Regional Hospitals, is about 28% of trailing-twelve-month revenue.", figure:"≈ 28% · $3.9M", area:"ORS area 3 / 19 — Customer concentration", threshold:"Concentration ≥ 20%",
+    source:{ label:"AR invoices + revenue roll-up by customer · TTM to Mar 2025", lines:["Cascade Regional Hospitals, TTM revenue ...... 3,912,400","Total TTM revenue ............................. 13,980,000","Share ......................................... 27.98%"] } },
+  { id:"P5", grade:"B", recoverable:false, fact:"A signed equipment-lease obligation has no matching entry in the ledger or payables — an unrecorded payable.", figure:"$3,100 / mo", area:"ORS area 19 vs 11 — Commitment-to-ledger gap", threshold:"Unrecorded payable (commitment-to-ledger gap)",
+    source:{ label:"Komatsu lift lease · 36-month term", lines:["Lease ........... 3,100.00 / mo, 36-month term, signed 4/2024","GL search ....... no recurring 3,100 entry","AP register ..... no Komatsu payable found"] } },
+  { id:"P8", grade:"B", recoverable:false, fact:"A “consulting” vendor paid $7,500 monthly is the owner’s spouse; no contract is on file.", figure:"$90,000 / yr", area:"ORS area 7 / 16 — Related-party flows", threshold:"Related-party flows of any size",
+    source:{ label:"AP vendor “Lakeside Advisory” · payment stream", lines:["Lakeside Advisory .... 7,500.00 / mo, 24 of 24 months","Vendor TIN ........... matches owner-household record","Contract on file ..... none"] } },
+  { id:"P9", grade:"B", recoverable:false, fact:"Three service vehicles past useful life show no repair-and-maintenance spend for eighteen months.", figure:"3 vehicles · 18 mo", area:"ORS area 22 (LMM) — Deferred maintenance", threshold:"Facilities / capital deferred-maintenance fact",
+    source:{ label:"Fixed-asset register + R&M detail by vehicle · Oct 2023–Mar 2025", lines:["Unit 12  VIN ••7741  in service 2009  R&M 18 mo ... 0.00","Unit 19  VIN ••2208  in service 2010  R&M 18 mo ... 0.00","Unit 24  VIN ••9015  in service 2011  R&M 18 mo ... 0.00"] } },
+  { id:"P10", grade:"B", recoverable:false, fact:"Four contractors paid a fixed monthly amount for more than six months follow a full-time work pattern; classification is shown as filed.", figure:"4 contractors", area:"ORS area 12 / 23 — Labor classification", threshold:"Classification facts as filed",
+    source:{ label:"1099 payment detail · trailing 12 months", lines:["4 payees  fixed 5,200–6,800 / mo  8–12 consecutive months","Paid via AP, issued 1099-NEC","Classification as filed ........ independent contractor"] } },
+];
+const partCD = [
+  { id:"P12", grade:"B", recoverable:false, fact:"A material customer contract requires the customer’s written consent before a change of control.", figure:"Consent required", area:"ORS area 32 (Part D) — Change-of-control consent", threshold:"Consent-to-sell held by a non-signing party",
+    source:{ label:"Cascade Regional Hospitals MSA §14.3", lines:["§14.3  Written consent required for any change of control","Counterparty ..... Cascade Regional Hospitals (≈28% of revenue)","Consent on file .. none requested"] } },
+  { id:"CD-clean", grade:"A", recoverable:false, clean:true, fact:"The capitalization table reconciles to 100% of the issuance documents; ownership is fully accounted.", figure:"Clean — 100%", area:"ORS area 29 (Part D) — Cap table", threshold:"—",
+    source:{ label:"Operating agreement + membership-unit ledger", lines:["Units issued per ledger ......... 10,000","Units per issuance documents .... 10,000","Reconciled ...................... 100%"] } },
+];
+const gradeE = [
+  { id:"E1", reason:"R1 — sale confidentiality", fact:"access logs and training records were not collected.", area:"ORS area 25–26 (Part C)" },
+  { id:"E2", reason:"R4 — consent withheld", fact:"communications-metadata analysis for owner-dependence was not run.", area:"ORS area 26 (Part C)" },
+  { id:"E3", reason:"R5 — third party declined", fact:"the landlord declined to confirm lease terms on the related-party building.", area:"ORS area 22 (Part B)" },
+];
+const indexLines = [
+  ["P1","Duplicate vendor payment","$18,240"],["P2","Unapplied vendor credit","$14,500"],
+  ["P3","Auto-renewing contract, 7% escalator","$96,000 / yr"],["P4","Customer concentration","≈ 28%"],
+  ["P5","Unrecorded lease commitment","$3,100 / mo"],["P6","Bank account unreconciled three months","$83,400"],
+  ["P7","Unsupported year-end top-side entries","≈ $210,000"],["P8","Related-party consulting payments","$90,000 / yr"],
+  ["P9","Deferred maintenance, three vehicles","—"],["P10","Four contractors on a full-time pattern, as filed","—"],
+  ["P11","Seasonal working-capital swing","> 12% MoM"],["P12","Change-of-control consent in a material contract","—"],
+  ["P13","Debt-like items absent from net-debt view","$785,000"],
+];
+const TABS = [{key:"cover",label:"Cover"},{key:"A",label:"Financial Record"},{key:"B",label:"Quality of Spend"},{key:"CD",label:"Operations & Governance"},{key:"index",label:"Disclosed Conditions"}];
 
-const FactRow = ({ item, showRecoverable = false }: { item: any, showRecoverable?: boolean }) => {
-  const [expanded, setExpanded] = useState(false);
-  
+function Chevron({ open }: { open: boolean }) {
+  return (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" className={`shrink-0 transition-transform duration-200 ${open?"rotate-90":""}`} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>);
+}
+function FactRow({ item }: { item: any }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="border-b border-zinc-200 bg-white last:border-b-0 transition-all hover:bg-zinc-50">
-      <button 
-        onClick={() => setExpanded(!expanded)} 
-        className="w-full text-left py-6 px-4 md:px-8 flex items-start sm:items-center gap-4 transition-colors"
-      >
-        <div className="mt-1 sm:mt-0 text-zinc-300">
-          {expanded ? <ChevronDown size={18} strokeWidth={1} /> : <ChevronRight size={18} strokeWidth={1} />}
-        </div>
-        
-        <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-y-3 gap-x-6">
-          <div className="text-[15px] text-zinc-800 pr-4 leading-relaxed font-light">
-            {item.fact}
-          </div>
-          
-          <div className="flex flex-wrap items-center gap-3 sm:justify-end shrink-0">
-            {showRecoverable && item.recoverable && (
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] uppercase tracking-widest text-zinc-400 font-medium">owner-directed</span>
-                <span className="px-2 py-[2px] text-[10px] uppercase tracking-widest bg-zinc-50 border border-zinc-200 text-zinc-600">
-                  recoverable - your call
-                </span>
-              </div>
-            )}
-            {item.figure && (
-              <span className="text-xs font-mono text-zinc-500 px-2 py-0.5 border border-zinc-200/50 bg-[#fafafa]">
-                {item.figure}
-              </span>
-            )}
-            <GradeBadge grade={item.grade} />
-          </div>
-        </div>
+    <div className="border-b border-slate-200">
+      <button onClick={() => setOpen(o=>!o)} className="w-full flex items-start gap-3 py-4 text-left group">
+        <span className={`mt-0.5 inline-flex items-center justify-center text-xs font-semibold rounded-sm w-7 h-7 font-mono ${gradeChip[item.grade]}`}>{item.grade}</span>
+        <span className="flex-1">
+          <span className="text-[15px] leading-snug text-slate-900">{item.fact}</span>
+          <span className="mt-1.5 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+            <span className="font-mono text-slate-700">{item.figure}</span><span className="text-slate-300">·</span><span>{item.area}</span>
+            {item.recoverable && <span className="inline-flex items-center rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 text-[11px] font-medium">Recoverable — your call</span>}
+            {item.clean && <span className="inline-flex items-center rounded-full bg-slate-50 text-slate-600 border border-slate-200 px-2 py-0.5 text-[11px] font-medium">No condition — verified clean</span>}
+          </span>
+        </span>
+        <span className="text-amber-700 group-hover:text-amber-800 mt-1 flex items-center gap-1 text-xs font-medium"><span className="hidden sm:inline">{open?"Hide source":"Tap to source"}</span><Chevron open={open} /></span>
       </button>
-      
-      {expanded && (
-        <div className="bg-[#fafafa] border-t border-zinc-200 p-6 md:pl-[68px] text-sm text-zinc-500 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
-            <div className="flex items-center gap-3">
-              <span className="font-semibold text-[10px] tracking-widest uppercase text-zinc-400 whitespace-nowrap">Source Area</span>
-              <span className="font-mono text-[11px] text-zinc-700">{item.area}</span>
-            </div>
-            {item.threshold && (
-              <div className="flex items-center gap-3">
-                <span className="font-semibold text-[10px] tracking-widest uppercase text-zinc-400 whitespace-nowrap">Threshold</span>
-                <span className="font-mono text-[11px] text-zinc-500">{item.threshold}</span>
-              </div>
-            )}
+      <div className={`overflow-hidden transition-all duration-300 ${open?"max-h-96 opacity-100":"max-h-0 opacity-0"}`}>
+        <div className="mb-4 ml-10 rounded-md border border-slate-200 bg-slate-900 text-slate-100">
+          <div className="flex items-center gap-2 border-b border-slate-700 px-3 py-2 text-[11px] uppercase tracking-wider text-slate-400">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Source · {item.source.label}
           </div>
-          {item.grade !== 'E' && (
-            <div className="pt-4 border-t border-zinc-200/50 text-[11px] text-zinc-400 flex items-center gap-2 font-mono">
-              <Search size={12} strokeWidth={1} /> Trailing logic trace linked to source document
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-};
-
-const FactBookDemo = () => {
-  const [activeTab, setActiveTab] = useState('Cover');
-  const tabs = ['Cover', 'Part A - Financial Record', 'Part B - Quality of Spend', 'Parts C/D - Ops & Gov', 'Disclosed-Conditions Index'];
-
-  return (
-    <div id="demo-factbook" className="w-full max-w-[1000px] mx-auto border border-zinc-200 bg-white scroll-mt-32">
-      <div className="bg-[#fafafa] border-b border-zinc-200 px-6 py-4 text-[10px] uppercase tracking-widest font-medium text-zinc-500 flex justify-center items-center gap-2">
-        <Info size={14} className="text-zinc-400" strokeWidth={1.5} />
-        {DEMO_DATA.label}
-      </div>
-
-      <div className="flex flex-col md:flex-row border-b border-zinc-200 bg-white">
-        <div className="flex overflow-x-auto no-scrollbar md:w-full">
-          {tabs.map((tab) => {
-            const shortName = tab.split(' - ')[0];
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`py-5 px-6 text-[11px] uppercase tracking-widest font-medium whitespace-nowrap focus:outline-none transition-colors border-b border-r border-zinc-200 last:border-r-0 ${
-                  activeTab === tab 
-                    ? 'border-b-zinc-900 text-zinc-900 bg-zinc-50/50' 
-                    : 'border-b-transparent text-zinc-400 hover:text-zinc-700 hover:bg-zinc-50'
-                }`}
-              >
-                <span className="hidden md:inline">{tab}</span>
-                <span className="md:hidden">{shortName === 'Disclosed-Conditions Index' ? 'Index' : shortName}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="p-6 md:p-16 min-h-[600px] bg-white">
-        {activeTab === 'Cover' && (
-          <div className="max-w-3xl mx-auto py-8">
-            <div className="flex items-center gap-3 mb-10 text-[11px] uppercase tracking-widest text-zinc-500 font-medium">
-              <ShieldCheck size={14} className="text-zinc-400" />
-              graded against the <a href="#/standard" className="underline hover:text-zinc-900">published standard</a>
-            </div>
-            
-            <h3 className="text-4xl md:text-5xl font-serif text-zinc-900 mb-8 tracking-tight leading-tight">{DEMO_DATA.cover.company}</h3>
-            <div className="h-px w-24 bg-zinc-300 mb-16" />
-            
-            <dl className="space-y-12">
-              <div className="grid md:grid-cols-3 gap-4 border-b border-zinc-100 pb-12">
-                <dt className="text-[11px] uppercase tracking-widest text-zinc-400 md:pt-2">Assessment Mark</dt>
-                <dd className="text-lg md:text-xl text-zinc-800 font-mono text-[14px] leading-relaxed">
-                  {DEMO_DATA.cover.mark}
-                </dd>
-              </div>
-              
-              <div className="grid md:grid-cols-3 gap-4 border-b border-zinc-100 pb-12">
-                <dt className="text-[11px] uppercase tracking-widest text-zinc-400 md:pt-2">
-                  Assessed Coverage
-                </dt>
-                <dd className="md:col-span-2">
-                  <div className="text-5xl font-light text-zinc-900 tracking-tight mb-2">
-                    {DEMO_DATA.cover.assessed_coverage_pct}<span className="text-3xl text-zinc-400 ml-1">%</span>
-                  </div>
-                  <div className="text-[13px] font-serif text-zinc-500 italic">
-                    (the share of the records in scope that we verified)
-                  </div>
-                </dd>
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-4 pt-4">
-                <dt className="text-[11px] font-semibold uppercase tracking-widest text-zinc-400 pt-6">Limits of Verification</dt>
-                <dd className="md:col-span-2 text-[15px] text-zinc-600 leading-loose bg-[#fafafa] p-8 border border-zinc-200">
-                  <p className="mb-4 text-zinc-900 font-medium font-serif italic text-lg">{DEMO_DATA.cover.limits.split('.')[0]}.</p>
-                  <p className="font-light">{DEMO_DATA.cover.limits.substring(DEMO_DATA.cover.limits.indexOf('.') + 1).trim()}</p>
-                </dd>
-              </div>
-            </dl>
-          </div>
-        )}
-
-        {activeTab.includes('Part A') && (
-          <div className="max-w-[800px] mx-auto">
-            <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-zinc-200 pb-8">
-              <div>
-                <h3 className="text-4xl font-serif text-zinc-900 tracking-tight mb-2">Part A</h3>
-                <p className="text-[11px] text-zinc-500 uppercase tracking-widest font-semibold mt-4">Financial Record</p>
-              </div>
-              <div className="bg-[#fafafa] border border-zinc-200 p-5 text-[13px] font-serif italic text-zinc-600 flex items-start gap-4 max-w-sm">
-                <Info size={16} className="shrink-0 mt-1 text-zinc-400" strokeWidth={1.5} />
-                <span className="leading-relaxed">An evidence grade rates the proof, never your business.</span>
-              </div>
-            </div>
-            
-            <div className="border border-zinc-200 text-left">
-              {DEMO_DATA.partA.map((item: any) => (
-                <FactRow key={item.id} item={item} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab.includes('Part B') && (
-          <div className="max-w-[800px] mx-auto">
-             <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-zinc-200 pb-8">
-              <div>
-                <h3 className="text-4xl font-serif text-zinc-900 tracking-tight mb-2">Part B</h3>
-                <p className="text-[11px] text-zinc-500 uppercase tracking-widest font-semibold mt-4">Quality of Spend</p>
-              </div>
-              <div className="bg-[#fafafa] border border-zinc-200 p-5 text-[13px] font-serif italic text-zinc-600 flex items-start gap-4 max-w-sm">
-                <Info size={16} className="shrink-0 mt-1 text-zinc-400" strokeWidth={1.5} />
-                <span className="leading-relaxed">An evidence grade rates the proof, never your business.</span>
-              </div>
-            </div>
-
-            <div className="border border-zinc-200 text-left">
-              {DEMO_DATA.partB.map((item: any) => (
-                <FactRow key={item.id} item={item} showRecoverable={true} />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab.includes('Parts C/D') && (
-          <div className="max-w-[800px] mx-auto">
-             <div className="mb-12 border-b border-zinc-200 pb-8">
-              <h3 className="text-4xl font-serif text-zinc-900 tracking-tight mb-2">Parts C & D</h3>
-              <p className="text-[11px] text-zinc-500 uppercase tracking-widest font-semibold mt-4">Operations & Governance</p>
-            </div>
-
-            <div className="border border-zinc-200 mb-16 text-left">
-              {DEMO_DATA.partsCD.map((item: any) => (
-                <FactRow key={item.id} item={item} />
-              ))}
-            </div>
-
-            <div className="bg-[#fafafa] border border-zinc-200 p-8 md:p-12 text-left">
-              <div className="mb-8">
-                 <h4 className="text-[11px] font-semibold uppercase tracking-widest text-zinc-900">Owner-controlled scope</h4>
-                 <p className="text-[15px] font-serif italic text-zinc-600 mt-3 leading-relaxed">Scope is the owner's choice. What's assessed, and what's disclosed, is set by the seller - disclosed first, on their terms.</p>
-              </div>
-
-              <div className="space-y-3">
-                {DEMO_DATA.gradeE.map((item: any) => (
-                  <div key={item.id} className="flex flex-col sm:flex-row sm:items-center py-5 px-6 bg-white border border-zinc-200 text-sm gap-4">
-                    <span className="text-zinc-500 font-mono text-[11px] w-40 shrink-0">{item.area}</span>
-                    <span className="text-zinc-600 font-light flex-1">{item.fact}</span>
-                    <GradeBadge grade="E" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab.includes('Index') && (
-          <div className="max-w-2xl mx-auto py-12">
-            <h3 className="text-4xl font-serif text-zinc-900 mb-12 border-b border-zinc-200 pb-8 text-center tracking-tight">Disclosed-Conditions Index</h3>
-            
-            <div className="p-8 my-12 text-[17px] font-serif text-zinc-600 italic leading-relaxed text-center border border-zinc-200 bg-[#fafafa]">
-              Conditions are counted and evidenced, never rated. Whether any condition matters is the reader's judgment.
-            </div>
-
-            <div className="flex flex-col gap-8 py-10 border-y border-zinc-200 my-12 px-6">
-              <div className="flex items-end justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Total conditions disclosed</span>
-                <span className="text-4xl font-serif text-zinc-900">{DEMO_DATA.index_count}</span>
-              </div>
-              <div className="flex items-end justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-widest text-zinc-500">Out of scope schedule</span>
-                <span className="font-mono text-xs text-zinc-500 bg-[#fafafa] px-3 py-1 border border-zinc-200">{DEMO_DATA.gradeE_schedule}</span>
-              </div>
-            </div>
-
-            <div className="bg-zinc-900 text-white p-12 md:p-16 text-center mt-16 shadow-2xl">
-               <p className="text-2xl md:text-3xl font-serif italic text-zinc-300 leading-relaxed max-w-lg mx-auto">
-                "{DEMO_DATA.close}"
-               </p>
-            </div>
-            
-            <div className="mt-12 text-center text-[13px] font-serif italic text-zinc-400 max-w-md mx-auto leading-relaxed">
-               <p>Scope is the owner's choice. What's assessed, and what's disclosed, is set by the seller - disclosed first, on their terms.</p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-const StandardPage = () => {
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
-
-  return (
-    <div className="bg-zinc-50 min-h-screen text-zinc-800 pb-32">
-      <div className="bg-zinc-900 text-zinc-200 py-4 px-6 text-center text-[13px] tracking-wide font-light shadow-inner sticky top-0 z-40">
-        Don’t take our word for it. This is the method we verify against — open to read, cite, and apply.
-      </div>
-      
-      <div className="max-w-[800px] mx-auto px-6 pt-24">
-        {/* Masthead */}
-        <div className="border-b-2 border-zinc-200 pb-12 mb-16 text-center md:text-left">
-          <h1 className="text-4xl md:text-5xl font-serif tracking-tight text-zinc-900 mb-6">
-            THE OPEN READINESS STANDARD
-          </h1>
-          <p className="font-mono text-sm tracking-widest uppercase text-zinc-500 mb-12">
-            Version 2.3 — Public Draft for Comment
-          </p>
-          <p className="text-xl md:text-2xl font-serif italic text-zinc-600 leading-relaxed mb-12 text-balance">
-            A published methodology for evidence verification in private business transactions — extended from the financial record to the spend, operational, and governance records that make a business transferable
-          </p>
-          <div className="flex flex-col gap-3 font-mono text-[11px] uppercase tracking-widest text-zinc-400">
-            <p><span className="text-zinc-600 font-semibold mr-2">Issued by:</span> Impact Surety — the Standard Issuer</p>
-            <p><span className="text-zinc-600 font-semibold mr-2">Date:</span> June 2026</p>
-            <p><span className="text-zinc-600 font-semibold mr-2">Supersedes:</span> Versions 2.2, 2.1, 2.0, and 1.0 (June 2026). Engagements complete under the version current at signing. The change log appears in Section 1.2; v2.3 records the issuer’s renaming to Impact Surety — no methodological change.</p>
-          </div>
-        </div>
-
-        <div className="bg-white border-l-4 border-zinc-900 p-8 mb-16 shadow-sm">
-          <p className="font-serif text-lg leading-relaxed text-zinc-800">
-            <strong>The standard in one sentence: </strong> 
-            Every material fact about a business — what it earns, what it spends, how it runs, and how it is governed — is verified against source evidence across the entire population of records, graded for evidence quality, disclosed without judgment, and traceable from any reported number, clause, or procedure back to the document that supports it.
-          </p>
-        </div>
-
-        {/* TOC */}
-        <div className="bg-[#fafafa] border border-zinc-200 p-8 mb-20">
-          <h2 className="text-[11px] font-semibold tracking-[0.2em] uppercase text-zinc-400 mb-6 font-mono">Table of Contents</h2>
-          <ul className="space-y-3 font-mono text-[13px] text-zinc-600">
-            <li><a href="#section-1" className="hover:text-zinc-900 hover:underline">1. Purpose: From Verified Earnings to a Fungible Asset</a></li>
-            <li><a href="#section-2" className="hover:text-zinc-900 hover:underline">2. Conformance Tiers</a></li>
-            <li><a href="#section-3" className="hover:text-zinc-900 hover:underline">3. Grade E — Not Assessed (and the Quiet Collection Rule)</a></li>
-            <li><a href="#section-4" className="hover:text-zinc-900 hover:underline">4. Limits of the Standard</a></li>
-            <li><a href="#section-5" className="hover:text-zinc-900 hover:underline">5. Part A — The Financial Record</a></li>
-            <li><a href="#section-6" className="hover:text-zinc-900 hover:underline">6. Part B — The Spend Record (Quality of Spend)</a></li>
-            <li><a href="#section-7" className="hover:text-zinc-900 hover:underline">7. Part C — The Operational Record</a></li>
-            <li><a href="#section-8" className="hover:text-zinc-900 hover:underline">8. Part D — The Governance Record</a></li>
-            <li><a href="#section-9" className="hover:text-zinc-900 hover:underline">9. Issuance Criteria and Machine-Grade Tolerances</a></li>
-            <li><a href="#section-10" className="hover:text-zinc-900 hover:underline">10. Disclosed Conditions Index — v2.0 Thresholds</a></li>
-            <li><a href="#section-11" className="hover:text-zinc-900 hover:underline">11. Reliance Framework</a></li>
-            <li><a href="#section-12" className="hover:text-zinc-900 hover:underline">12. Governance, Maintenance, and Open Items</a></li>
-          </ul>
-        </div>
-
-        <div className="space-y-24">
-          
-          <section id="section-1" className="scroll-mt-32">
-            <h2 className="text-3xl font-serif text-zinc-900 mb-6 tracking-tight">1. Purpose: From Verified Earnings to a Fungible Asset</h2>
-            <div className="prose prose-zinc max-w-none text-zinc-700 font-light leading-relaxed">
-              <p>Version 1.0 standardized the financial record — the Quality-of-Earnings-adjacent facts a buyer’s accountant relies on. That solved diligence survivability. It did not solve the deeper illiquidity of the private business market: businesses are hard to buy not only because their earnings are unverified, but because their costs are opaque, their operations live in the owner’s head, and their governance is undocumented. Each of those is a bespoke discovery exercise in every transaction — which is precisely what makes every transaction bespoke.</p>
-              <p>Version 2.0 extends the methodology across the remaining records of the enterprise. The destination is fungibility: when the earnings, spend, operating, and governance facts of any business are verified to identical published tolerances and presented in identical structure, businesses become comparable the way graded commodities, inspected houses, and title-searched properties are comparable. Pricing remains the market’s job; the standard’s job is to make every business legible in the same language. The same extension carries the standard upmarket: the records that let a Main Street buyer close are the records M&A advisors, investment banks, lenders, and private-equity operating teams currently rebuild by hand in every deal.</p>
-
-              <h3 className="text-xl font-serif text-zinc-900 tracking-tight mt-10 mb-4">1.1 Principles (unchanged from v1.0)</h3>
-              <p>Facts, not opinions. Census, not sampling. Source-linked. Published, not proprietary. Earned, not purchased. These five govern every Part of this standard; their full statements appear in v1.0 Section 1.1 and are incorporated here unchanged.</p>
-
-              <h3 className="text-xl font-serif text-zinc-900 tracking-tight mt-10 mb-4">1.2 Change log: v1.0 → v2.0</h3>
-              <div className="overflow-x-auto text-[13px] font-sans">
-                <table className="w-full border-collapse">
-                  <tbody>
-                    <tr className="border-b border-zinc-200 align-top"><td className="py-3 pr-4 font-mono text-zinc-500 whitespace-nowrap">C1</td><td className="py-3">Scope reorganized into four Parts: A — Financial Record (v1.0 areas 1–15, unchanged); B — Spend Record (new, areas 16–24, the Quality of Spend discipline); C — Operational Record (new, areas 25–28); D — Governance Record (new, areas 29–32)</td></tr>
-                    <tr className="border-b border-zinc-200 align-top"><td className="py-3 pr-4 font-mono text-zinc-500">C2</td><td className="py-3">Two conformance tiers introduced: Readiness Core (Part A) and Transaction Grade (Parts A–D)</td></tr>
-                    <tr className="border-b border-zinc-200 align-top"><td className="py-3 pr-4 font-mono text-zinc-500">C3</td><td className="py-3">Module marks introduced: Evidence-Complete (A), Spend-Complete (B), Operations-Documented (C), Governance-Complete (D); all four current at once constitute the Transaction-Grade designation</td></tr>
-                    <tr className="border-b border-zinc-200 align-top"><td className="py-3 pr-4 font-mono text-zinc-500">C4</td><td className="py-3">Disclosed Conditions Index extended with spend, operational, and governance thresholds (Section 10)</td></tr>
-                    <tr className="border-b border-zinc-200 align-top"><td className="py-3 pr-4 font-mono text-zinc-500">C5</td><td className="py-3">Conditional-computation rule extended to spend and dependence arithmetic (e.g., acquisition cost recomputed at cited benchmark channel rates); the prohibition on forecasts, probabilities, and time-horizon predictions is restated and applies in full</td></tr>
-                    <tr className="border-b border-zinc-200 align-top"><td className="py-3 pr-4 font-mono text-zinc-500">C6</td><td className="py-3">Evidence Grade Scale (v1.0 Section 3) applied unchanged to non-financial artifacts: procedures, system logs, registers, and corporate records are graded by the same A–D source hierarchy</td></tr>
-                    <tr className="border-b border-zinc-200 align-top"><td className="py-3 pr-4 font-mono text-zinc-500">C7</td><td className="py-3">Machine-grade tolerances (v1.0 Section 6) retained for Part A and extended with Part-specific thresholds (Section 9)</td></tr>
-                    <tr className="border-b border-zinc-200 align-top"><td className="py-3 pr-4 font-mono text-zinc-500">C8</td><td className="py-3">v2.1: Grade E (Not Assessed) added to the evidence scale — a disclosed, reason-coded state for evidence deliberately not gathered, with anti-gaming rules (Section 3)</td></tr>
-                    <tr className="border-b border-zinc-200 align-top"><td className="py-3 pr-4 font-mono text-zinc-500">C9</td><td className="py-3">v2.1: Quiet Collection rule and Staged module marks added, sequencing employee-visible evidence gathering to protect confidential sale processes (Section 3.3)</td></tr>
-                    <tr className="border-b border-zinc-200 align-top"><td className="py-3 pr-4 font-mono text-zinc-500">C10</td><td className="py-3">v2.2: Limits of the Standard added (Section 4) — an explicit statement of what census verification does and does not establish, accompanying every deliverable</td></tr>
-                    <tr className="border-b border-zinc-200 align-top"><td className="py-3 pr-4 font-mono text-zinc-500">C11</td><td className="py-3">v2.2: Reliance Framework added (Section 11) — the supported path by which buyers, lenders, and insurers rely on the file: a seller completeness representation keyed to the file in the purchase agreement, supported by the Issuer’s Verification Certificate; representation template opened as Annex R for counsel drafting</td></tr>
-                    <tr className="align-top"><td className="py-3 pr-4 font-mono text-zinc-500">C12</td><td className="py-3">v2.3: Standard Issuer renamed Impact Surety; the working name "DealReady" is retired. Editorial only — no criterion, threshold, or governance rule changes. Marks issued under prior versions remain valid and reference their issuing version</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-
-          <hr className="border-zinc-200" />
-
-          <section id="section-2" className="scroll-mt-32">
-            <h2 className="text-3xl font-serif text-zinc-900 mb-6 tracking-tight">2. Conformance Tiers</h2>
-            <div className="overflow-x-auto text-[13px] font-sans border border-zinc-200 rounded-sm">
-              <table className="w-full text-left">
-                <thead className="bg-[#fafafa] border-b border-zinc-200 text-zinc-700">
-                  <tr>
-                    <th className="py-4 px-4 font-medium uppercase tracking-widest text-[11px]"></th>
-                    <th className="py-4 px-4 font-medium uppercase tracking-widest text-[11px] border-l border-zinc-200">Tier I — Readiness Core</th>
-                    <th className="py-4 px-4 font-medium uppercase tracking-widest text-[11px] border-l border-zinc-200">Tier II — Transaction Grade</th>
-                  </tr>
-                </thead>
-                <tbody className="text-zinc-600 font-light">
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">Scope</td><td className="py-4 px-4 border-l border-zinc-200">Part A (areas 1–15)</td><td className="py-4 px-4 border-l border-zinc-200">Parts A–D (areas 1–32)</td></tr>
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">Built for</td><td className="py-4 px-4 border-l border-zinc-200">Main Street and lower-middle-market sales; broker-intermediated deals; SBA-financed buyers</td><td className="py-4 px-4 border-l border-zinc-200">M&A advisors, investment banks, private-equity and family-office buyers, lender credit committees, post-close operating teams</td></tr>
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">Marks available</td><td className="py-4 px-4 border-l border-zinc-200 font-mono text-[12px] bg-zinc-50">Evidence-Complete</td><td className="py-4 px-4 border-l border-zinc-200 font-mono text-[12px] bg-zinc-50">All module marks; Transaction-Grade designation when all four are simultaneously current</td></tr>
-                  <tr><td className="py-4 px-4 font-medium text-zinc-800">What it answers</td><td className="py-4 px-4 border-l border-zinc-200 italic">"Are the earnings real and traceable?"</td><td className="py-4 px-4 border-l border-zinc-200 italic">"Is this enterprise legible end-to-end — earnings, spend, operations, governance — to anyone who reads the standard?"</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <hr className="border-zinc-200" />
-
-          <section id="section-3" className="scroll-mt-32">
-            <h2 className="text-3xl font-serif text-zinc-900 mb-6 tracking-tight">3. Grade E — Not Assessed (and the Quiet Collection Rule)</h2>
-            <div className="prose prose-zinc max-w-none text-zinc-700 font-light leading-relaxed">
-              <p>Versions 1.0 and 2.0 of this standard graded every figure A–D and required every scope area populated. Real transactions are not always free to collect everything: gathering employee-visible evidence — access logs, training records, time and communications metadata — can announce a confidential sale to a workforce that must not learn of it; some owners decline consent to specific sources; some records simply have never existed. v2.1 therefore adds a fifth state to the evidence scale:</p>
-              
-              <div className="bg-zinc-50 border border-zinc-200 p-6 flex items-start gap-6 font-mono text-sm leading-relaxed my-8">
-                <span className="text-2xl font-bold bg-white px-3 py-1 border border-zinc-200 shadow-sm text-zinc-900">E</span>
-                <p className="text-zinc-700">Not assessed — the evidence was deliberately not gathered. Always disclosed, always reason-coded, never silent. Grade E is neither a finding nor a failure: it tells the reader precisely what was not looked at, and why.</p>
-              </div>
-
-              <h3 className="text-xl font-serif text-zinc-900 tracking-tight mt-10 mb-4">3.1 Reason codes (the published registry)</h3>
-              <ul className="list-disc pl-5 space-y-2">
-                <li><strong className="font-mono text-zinc-900 font-normal">R1 — Sale confidentiality.</strong> Collection would be visible to employees or other parties from whom the process is confidential. The default reason for deferring employee-facing items in Parts B and C.</li>
-                <li><strong className="font-mono text-zinc-900 font-normal">R2 — Staged collection.</strong> Deferred by plan to a later stage (e.g., post-LOI, post-announcement), with the stage named.</li>
-                <li><strong className="font-mono text-zinc-900 font-normal">R3 — Records do not exist.</strong> The system or document class has never existed (distinct from Grade D, where a representation exists without support).</li>
-                <li><strong className="font-mono text-zinc-900 font-normal">R4 — Consent withheld.</strong> The owner declined consent for a specific source (e.g., communications metadata). The decline itself is the disclosed fact.</li>
-                <li><strong className="font-mono text-zinc-900 font-normal">R5 — Third party declined.</strong> A counterparty, landlord, or institution refused to provide or confirm.</li>
-              </ul>
-
-              <h3 className="text-xl font-serif text-zinc-900 tracking-tight mt-10 mb-4">3.2 Anti-gaming rules</h3>
-              <ul className="list-disc pl-5 space-y-2">
-                <li><strong>No E after evidence is in hand.</strong> Once collection on an item has begun and evidence exists, it must be graded A–D and its findings disclosed. Grade E can never be applied retroactively to suppress an inconvenient result; doing so is a revocation event under the Governance Charter.</li>
-                <li><strong>E is item-level and visible.</strong> Every deliverable and every mark states its E-count with reason codes (e.g., “6 items Grade E: R1×4, R4×2”), and the E-item list is enumerated in a schedule the reader can inspect.</li>
-                <li><strong>Part A is E-restricted.</strong> The financial record (areas 1–15) does not admit Grade E except under R3/R5 line items disclosed within an area; the Evidence-Complete mark requires zero E items in Part A. The earnings facts are never optional.</li>
-                <li><strong>Scores show assessed coverage.</strong> All scores are computed over assessed items only, and every score is displayed beside its Assessed Coverage percentage — a 92 score at 60% assessed coverage cannot masquerade as a 92 at full coverage.</li>
-                <li><strong>Best practice stated plainly.</strong> Full collection is best operational practice and the standard says so; Grade E exists to make honest incompleteness legible, not to make incompleteness comfortable. E items convert to graded items the moment the evidence is gathered.</li>
-              </ul>
-
-              <h3 className="text-xl font-serif text-zinc-900 tracking-tight mt-10 mb-4">3.3 Quiet Collection and Staged marks</h3>
-              <p>Engagements conducted during a confidential sale process follow the Quiet Collection sequence: documents, system exports, bank and accounting feeds, and public records first (invisible to the workforce); employee-visible collection — access-log analysis, training records, interviews of any kind, time and communications metadata — deferred under R1/R2 until the owner authorizes the stage. Module marks issuable with open R1/R2 items carry the Staged designation (e.g., “Operations-Documented (Staged): 71% assessed coverage; 5 items deferred R1”), convert automatically to full marks when the deferred items are collected and graded, and are dated like all marks under the 90-day currency rule.</p>
-            </div>
-          </section>
-
-          <hr className="border-zinc-200" />
-
-          <section id="section-4" className="scroll-mt-32">
-            <h2 className="text-3xl font-serif text-zinc-900 mb-6 tracking-tight">4. Limits of the Standard</h2>
-            <div className="prose prose-zinc max-w-none text-zinc-700 font-light leading-relaxed">
-              <p>Credibility requires stating not only what this standard verifies, but what it cannot. A Limits statement substantially in the following form accompanies every deliverable and every mark.</p>
-              <ul className="list-disc pl-5 space-y-4">
-                <li><strong>Census means provided records, not reality.</strong> Full-population verification covers 100% of the records provided by the business and the sources it authorizes — books, bank and system feeds, tax filings, contracts, and public records. It establishes the completeness, consistency, and source-traceability of that record. It cannot establish that the record is the whole of reality.</li>
-                <li><strong>What the methodology structurally narrows.</strong> Grade A bank-direct evidence and three-way reconciliation make many misstatements arithmetically visible: revenue booked without deposits, deposits without revenue, books that diverge from filed returns, duplicate and phantom payments, undisclosed liens in public records. These are caught not by suspicion but by the matching itself.</li>
-                <li><strong>What remains outside any records-based method.</strong> Revenue never deposited into any visible account; a parallel undisclosed entity; collusive schemes documented with genuine-looking third-party paper; oral commitments never written down; and future events. Where adjacent facts make such gaps detectable (e.g., margins inconsistent with purchasing volumes), they surface as disclosed conditions — but their absence is never certified.</li>
-                <li><strong>This is not a fraud examination and not assurance.</strong> No deliverable expresses an opinion, provides assurance under any professional attestation standard, or substitutes for the reader’s own procedures, professional advisors, or contractual protections. The Reliance Framework (Section 11) defines the supported path for placing legal weight on the file.</li>
-              </ul>
-              <p className="mt-6 italic font-serif text-lg">Stating these limits is not a hedge; it is the boundary that makes everything inside it checkable. A method that claims everything can be trusted nowhere.</p>
-            </div>
-          </section>
-
-          <hr className="border-zinc-200" />
-
-          <section id="section-5" className="scroll-mt-32">
-            <h2 className="text-3xl font-serif text-zinc-900 mb-6 tracking-tight">5. Part A — The Financial Record (areas 1–15)</h2>
-            <div className="prose prose-zinc max-w-none text-zinc-700 font-light leading-relaxed">
-              <p>Part A is v1.0’s fifteen scope areas, incorporated unchanged: (1) proof of cash; (2) revenue composition; (3) customer concentration; (4) gross margin; (5) earnings adjustments; (6) owner compensation and perquisites; (7) related-party transactions; (8) receivables, payables and cutoff; (9) inventory; (10) working capital; (11) debt and debt-like items; (12) payroll and workforce; (13) tax; (14) contracts and leases; (15) legal and licensing. Populations, deliverables, and excluded judgments are as published in v1.0 Section 4; machine-grade issuance tolerances as in v1.0 Section 6.</p>
-            </div>
-          </section>
-
-          <hr className="border-zinc-200" />
-
-          <section id="section-6" className="scroll-mt-32">
-            <h2 className="text-3xl font-serif text-zinc-900 mb-6 tracking-tight">6. Part B — The Spend Record (Quality of Spend, areas 16–24)</h2>
-            <div className="prose prose-zinc max-w-none text-zinc-700 font-light leading-relaxed mb-8">
-              <p>Part B applies the identical methodology to the expense side of the P&L — the discipline known as Quality of Spend (QofS). Where a Quality of Earnings asks whether the revenue is real, the spend record asks whether the cost base is what it appears to be: what is actually being paid versus what was contracted, what spend is the owner’s rather than the business’s, what future spend is already committed, and what the true, fully loaded cost of acquiring a customer is. These are the findings behind the majority of price re-trades between letter of intent and close; verifying them before market is what removes the ambush.</p>
-            </div>
-
-            <div className="overflow-x-auto text-[13px] font-sans border border-zinc-200 rounded-sm mb-12">
-              <table className="w-full text-left">
-                <thead className="bg-[#fafafa] border-b border-zinc-200 text-zinc-700">
-                  <tr>
-                    <th className="py-4 px-4 font-medium text-[12px]">Scope area</th>
-                    <th className="py-4 px-4 font-medium text-[12px] border-l border-zinc-200">Population examined</th>
-                    <th className="py-4 px-4 font-medium text-[12px] border-l border-zinc-200">Factual deliverable</th>
-                    <th className="py-4 px-4 font-medium text-[12px] border-l border-zinc-200">Excluded judgment (reserved to the reader)</th>
-                  </tr>
-                </thead>
-                <tbody className="text-zinc-600 font-light">
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">16. Vendor & payables forensics</td><td className="py-4 px-4 border-l border-zinc-200">100% of AP transactions, vendor master, and vendor contracts, 36 months</td><td className="py-4 px-4 border-l border-zinc-200">Duplicate-vendor and duplicate-payment matches listed; contract rate vs. billed rate reconciled line-by-line; unapplied credits and rebate thresholds vs. claims scheduled; early-payment discounts available vs. captured computed; top-10 vendor and related-party vendor exposure</td><td className="py-4 px-4 border-l border-zinc-200">Whether vendor relationships are “good”; which contracts to renegotiate</td></tr>
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">17. Owner-related spend universe</td><td className="py-4 px-4 border-l border-zinc-200">All disbursements, payroll, benefits, and related-party flows</td><td className="py-4 px-4 border-l border-zinc-200">Every owner-related item identified, categorized, and quantified; each presented as an evidence-graded adjustment candidate with a cited market benchmark; family-on-payroll roles documented per HR and system records</td><td className="py-4 px-4 border-l border-zinc-200">Which adjustments are allowable; the persuasive narrative (advocacy is the seller’s and advisor’s domain)</td></tr>
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">18. Acquisition cost & relationship attribution</td><td className="py-4 px-4 border-l border-zinc-200">All sales and marketing spend; CRM/customer-origin records; owner calendar, communications metadata, and time records (with consent)</td><td className="py-4 px-4 border-l border-zinc-200">Fully loaded acquisition cost computed and decomposed by channel; share of revenue attributable to owner-sourced relationships per origin records; conditional recomputation of acquisition cost at cited third-party benchmark channel rates</td><td className="py-4 px-4 border-l border-zinc-200">Whether the relationships will transfer; post-transition performance forecasts; transition timelines</td></tr>
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">19. Commitment inventory</td><td className="py-4 px-4 border-l border-zinc-200">Every contract, lease, subscription, and obligation — 100%, no materiality sample</td><td className="py-4 px-4 border-l border-zinc-200">Auto-renewal, take-or-pay, change-of-control, royalty, exclusivity, and consulting-obligation clauses extracted verbatim with clause-level citations; committed future spend scheduled by year</td><td className="py-4 px-4 border-l border-zinc-200">Materiality of any commitment; whether consents are obtainable</td></tr>
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">20. Technology & subscription spend</td><td className="py-4 px-4 border-l border-zinc-200">All software, cloud, and telecom spend; system usage logs</td><td className="py-4 px-4 border-l border-zinc-200">License count vs. active-user count per system logs; tier vs. metered usage; duplicate-function tool inventory; committed vs. consumed cloud spend; licensing-compliance facts as recorded</td><td className="py-4 px-4 border-l border-zinc-200">Which tools “should” be cut; security adequacy</td></tr>
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">21. Insurance & risk spend</td><td className="py-4 px-4 border-l border-zinc-200">All policies, premiums, claims history, broker agreements</td><td className="py-4 px-4 border-l border-zinc-200">Policy census with coverage terms extracted; premiums against cited benchmarks; claims and experience-modification history as filed; broker compensation as disclosed in documents</td><td className="py-4 px-4 border-l border-zinc-200">Coverage adequacy; risk acceptability</td></tr>
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">22. Facilities & capital record</td><td className="py-4 px-4 border-l border-zinc-200">All leases, work orders, maintenance ledgers, asset registers</td><td className="py-4 px-4 border-l border-zinc-200">Lease economics extracted and set against cited market data; asset register with age and documented condition reports; maintenance backlog as evidenced by work orders and inspections; capitalization boundary as applied, documented</td><td className="py-4 px-4 border-l border-zinc-200">What “should” be spent on deferred items; lease fairness</td></tr>
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">23. Labor & benefits record</td><td className="py-4 px-4 border-l border-zinc-200">All compensation, benefits invoices, and plan documents</td><td className="py-4 px-4 border-l border-zinc-200">Wage census against cited benchmarks by role; benefits cost series from invoices; severance, retention, and bonus commitments extracted (formal and documented-informal); classification facts as filed</td><td className="py-4 px-4 border-l border-zinc-200">Compensation appropriateness; classification risk opinions</td></tr>
-                  <tr><td className="py-4 px-4 font-medium text-zinc-800">24. Off-balance-sheet & contingent items</td><td className="py-4 px-4 border-l border-zinc-200">Warranty records, litigation dockets, guarantees, indemnities, environmental records — 100%</td><td className="py-4 px-4 border-l border-zinc-200">Warranty claims history computed; litigation and threatened-claim docket compiled from records; personal guarantees and indemnification obligations extracted with citations; environmental records inventoried</td><td className="py-4 px-4 border-l border-zinc-200">Reserve adequacy; outcome predictions</td></tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div className="bg-white border-l-4 border-zinc-400 p-8 shadow-sm">
-                <h4 className="text-xs uppercase tracking-widest text-zinc-400 font-semibold font-sans mb-3">The facts line in Part B</h4>
-                <p className="text-zinc-700 font-serif leading-relaxed">The spend record deliberately stops where Quality-of-Spend practice drifts into advocacy or prediction. Adjustment candidates are graded and benchmarked — the “defensible narrative” belongs to the seller’s advisors. Acquisition cost is recomputed at cited benchmark rates — the claim that the transition takes eighteen months, or succeeds at all, is a forecast and is excluded. The standard hands the reader the buyer’s own arithmetic, pre-run from documented inputs; it never tells the reader how the story ends.</p>
-            </div>
-          </section>
-
-          <hr className="border-zinc-200" />
-
-          <section id="section-7" className="scroll-mt-32">
-            <h2 className="text-3xl font-serif text-zinc-900 mb-6 tracking-tight">7. Part C — The Operational Record (areas 25–28)</h2>
-            <div className="prose prose-zinc max-w-none text-zinc-700 font-light leading-relaxed mb-8">
-              <p>A business whose operations exist only in its owner’s head is not transferable at full value, however clean its financials. Part C verifies the documented state of operations — presence and coverage, never quality. Whether a procedure is any good is an operating judgment; whether it exists, is current, and is actually used is a fact.</p>
-            </div>
-
-            <div className="overflow-x-auto text-[13px] font-sans border border-zinc-200 rounded-sm">
-              <table className="w-full text-left">
-                <thead className="bg-[#fafafa] border-b border-zinc-200 text-zinc-700">
-                  <tr>
-                    <th className="py-4 px-4 font-medium text-[12px]">Scope area</th>
-                    <th className="py-4 px-4 font-medium text-[12px] border-l border-zinc-200">Population examined</th>
-                    <th className="py-4 px-4 font-medium text-[12px] border-l border-zinc-200">Factual deliverable</th>
-                    <th className="py-4 px-4 font-medium text-[12px] border-l border-zinc-200">Excluded judgment</th>
-                  </tr>
-                </thead>
-                <tbody className="text-zinc-600 font-light">
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">25. Procedure inventory & coverage</td><td className="py-4 px-4 border-l border-zinc-200">Every business function in the published Function Taxonomy (sales, fulfillment, finance, HR, IT, compliance, …) against the company’s full document corpus</td><td className="py-4 px-4 border-l border-zinc-200">Per function: documented procedure exists / does not; last-revision date; usage evidence (access logs, training records, references in tickets). Enterprise SOP coverage ratio computed: functions with a current, used procedure ÷ total functions</td><td className="py-4 px-4 border-l border-zinc-200">Procedure quality; whether coverage is “enough”</td></tr>
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">26. Owner-time & dependence record</td><td className="py-4 px-4 border-l border-zinc-200">Owner calendar, communications metadata, and system approval logs (with consent), 12 months</td><td className="py-4 px-4 border-l border-zinc-200">Owner hours allocated by function as recorded; count and dollar value of approvals only the owner can execute per system permissions; customers and vendors for whom the owner is the sole recorded contact, quantified by revenue and spend</td><td className="py-4 px-4 border-l border-zinc-200">Whether the business “can run without them”; successor suitability</td></tr>
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">27. Systems & automation record</td><td className="py-4 px-4 border-l border-zinc-200">Complete system inventory; integration logs; core workflow definitions</td><td className="py-4 px-4 border-l border-zinc-200">System census with data flows mapped from integration evidence; manual-step counts in each core workflow as documented; single-person system-admin dependencies listed from permission records</td><td className="py-4 px-4 border-l border-zinc-200">Which processes to automate; system quality</td></tr>
-                  <tr><td className="py-4 px-4 font-medium text-zinc-800">28. Key-relationship transferability facts</td><td className="py-4 px-4 border-l border-zinc-200">All customer and vendor contracts; CRM ownership records</td><td className="py-4 px-4 border-l border-zinc-200">Contracts containing personal-service or named-individual terms extracted; relationship-owner field census from CRM; documented succession or second-contact coverage per relationship</td><td className="py-4 px-4 border-l border-zinc-200">Whether relationships will survive transition</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <hr className="border-zinc-200" />
-
-          <section id="section-8" className="scroll-mt-32">
-            <h2 className="text-3xl font-serif text-zinc-900 mb-6 tracking-tight">8. Part D — The Governance Record (areas 29–32)</h2>
-            <div className="prose prose-zinc max-w-none text-zinc-700 font-light leading-relaxed mb-8">
-              <p>Institutional buyers and their counsel spend the first weeks of every deal reconstructing whether the company is what its cap table says, who can authorize what, and whether the corporate record supports the transaction. Part D verifies the documented state of governance — again presence, completeness, and consistency, never effectiveness, which is the domain of controls attestation and is expressly excluded.</p>
-            </div>
-
-             <div className="overflow-x-auto text-[13px] font-sans border border-zinc-200 rounded-sm">
-              <table className="w-full text-left">
-                <thead className="bg-[#fafafa] border-b border-zinc-200 text-zinc-700">
-                  <tr>
-                    <th className="py-4 px-4 font-medium text-[12px]">Scope area</th>
-                    <th className="py-4 px-4 font-medium text-[12px] border-l border-zinc-200">Population examined</th>
-                    <th className="py-4 px-4 font-medium text-[12px] border-l border-zinc-200">Factual deliverable</th>
-                    <th className="py-4 px-4 font-medium text-[12px] border-l border-zinc-200">Excluded judgment</th>
-                  </tr>
-                </thead>
-                <tbody className="text-zinc-600 font-light">
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">29. Corporate record completeness</td><td className="py-4 px-4 border-l border-zinc-200">Formation documents, minutes, resolutions, equity issuances, transfer records — 100%</td><td className="py-4 px-4 border-l border-zinc-200">Cap table reconciled to every issuance and transfer document; minute-book gaps listed by date; consents and resolutions inventoried against actions requiring them per the company’s own documents</td><td className="py-4 px-4 border-l border-zinc-200">Enforceability; cleanup advice</td></tr>
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">30. Authority & controls presence</td><td className="py-4 px-4 border-l border-zinc-200">Signing-authority documents; system permission exports; policy corpus</td><td className="py-4 px-4 border-l border-zinc-200">Documented authority matrix compiled; who-can-do-what facts extracted from live system permissions; policy inventory mapped to recognized control-framework components as presence facts (exists / dated / acknowledged)</td><td className="py-4 px-4 border-l border-zinc-200">Control effectiveness (attestation territory); policy quality</td></tr>
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800">31. Related-party governance</td><td className="py-4 px-4 border-l border-zinc-200">Related-party register; all related-party transactions; approval records</td><td className="py-4 px-4 border-l border-zinc-200">Complete related-party register; each related-party transaction matched to its approval record or listed as unapproved-as-documented</td><td className="py-4 px-4 border-l border-zinc-200">Fairness of terms</td></tr>
-                  <tr><td className="py-4 px-4 font-medium text-zinc-800">32. Transaction-governance readiness</td><td className="py-4 px-4 border-l border-zinc-200">Charter documents, equity agreements, guarantees, D&O policies</td><td className="py-4 px-4 border-l border-zinc-200">Consents required to sell, per the documents, listed verbatim; drag/tag, ROFR, and transfer-restriction clauses extracted; personal guarantees inventoried with release requirements as written; D&O coverage terms extracted</td><td className="py-4 px-4 border-l border-zinc-200">Deal-structure advice; legal opinions</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <hr className="border-zinc-200" />
-
-          <section id="section-9" className="scroll-mt-32">
-            <h2 className="text-3xl font-serif text-zinc-900 mb-6 tracking-tight">9. Issuance Criteria and Machine-Grade Tolerances</h2>
-            <div className="prose prose-zinc max-w-none text-zinc-700 font-light leading-relaxed mb-8">
-              <p>Part A retains v1.0 Section 6 in full: ≥99% of revenue and expense dollars at Grade A/B; 100% of revenue transactions individually matched record-to-record; aggregate unreconciled variance ≤0.01% of trailing-twelve-month revenue with a 0.05% per-month ceiling; 100% clause extraction with clause-level citations; 90-day currency with continuous-feed standing verification. Parts B–D add module thresholds, equally mechanical and equally beyond manual feasibility:</p>
-            </div>
-
-            <div className="overflow-x-auto text-[13px] font-sans border border-zinc-200 rounded-sm">
-              <table className="w-full text-left">
-                <thead className="bg-[#fafafa] border-b border-zinc-200 text-zinc-700">
-                  <tr>
-                    <th className="py-4 px-4 font-medium text-[12px]">Module mark</th>
-                    <th className="py-4 px-4 font-medium text-[12px] border-l border-zinc-200">Issuance thresholds (all required)</th>
-                  </tr>
-                </thead>
-                <tbody className="text-zinc-600 font-light font-mono text-[11px] leading-relaxed">
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800 bg-zinc-50">Spend-Complete (Part B)</td><td className="py-4 px-4 border-l border-zinc-200">100% of AP transactions tested for duplicates and contract-rate variance; ≥99% of expense dollars at Grade A/B; 100% of commitments and clauses extracted with citations; every owner-related disbursement categorized; acquisition-cost attribution populated for ≥99% of customer records</td></tr>
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800 bg-zinc-50">Operations-Documented (Part C)</td><td className="py-4 px-4 border-l border-zinc-200">100% of Function Taxonomy assessed; coverage ratio, owner-time allocation, sole-contact exposure, and manual-step counts computed from records (not interviews); every figure source-linked. Issues as Operations-Documented (Staged) while R1/R2 Grade E items remain open, per Section 3.3. Note: this mark attests the record is complete — a low coverage ratio still earns the mark, disclosed</td></tr>
-                  <tr className="border-b border-zinc-200"><td className="py-4 px-4 font-medium text-zinc-800 bg-zinc-50">Governance-Complete (Part D)</td><td className="py-4 px-4 border-l border-zinc-200">Cap table reconciled to 100% of issuance documents with zero unexplained entries; 100% of transfer-restriction and consent clauses extracted; every related-party transaction matched to an approval record or listed as unmatched</td></tr>
-                  <tr><td className="py-4 px-4 font-medium text-zinc-800 bg-zinc-50">Transaction-Grade™</td><td className="py-4 px-4 border-l border-zinc-200">All four module marks simultaneously current (90-day rule applies to each). The designation that makes the enterprise legible end-to-end under one published methodology. Where Staged module marks are included, the designation reads Transaction-Grade (Staged) and enumerates open E items</td></tr>
-                </tbody>
-              </table>
-            </div>
-
-            <p className="mt-8 text-zinc-700 font-light leading-relaxed">Required mark language per v1.0 Section 6, extended per module and including the E-count with reason codes and the Assessed Coverage percentage; every mark states what it describes and repeats that it is not an opinion on the business, its operations, its controls’ effectiveness, or its value.</p>
-          </section>
-
-          <hr className="border-zinc-200" />
-
-          <section id="section-10" className="scroll-mt-32">
-            <h2 className="text-3xl font-serif text-zinc-900 mb-6 tracking-tight">10. Disclosed Conditions Index — v2.0 Thresholds</h2>
-            <div className="prose prose-zinc max-w-none text-zinc-700 font-light leading-relaxed mb-6">
-              <p>v1.0 financial thresholds carry over unchanged. Conditions cannot fire on Grade E items; unassessed areas are listed as such beside the index so absence of a condition is never mistaken for absence of the fact. New mechanical disclosure thresholds, reported descriptively, never rated:</p>
-            </div>
-            <ul className="list-disc pl-5 space-y-3 font-mono text-xs text-zinc-600 leading-relaxed">
-              <li><strong className="text-zinc-900 font-sans text-sm">Spend:</strong> duplicate or contract-variance payments ≥ 0.1% of annual spend; unapplied credits ≥ $10,000; auto-renewing commitments ≥ 5% of annual spend; any take-or-pay obligation; vendor concentration — any single vendor ≥ 20% of spend; related-party vendor flows of any size.</li>
-              <li><strong className="text-zinc-900 font-sans text-sm">Owner economics:</strong> owner-related spend candidates ≥ 10% of unadjusted earnings; related-party real estate at terms deviating ≥ 15% from cited market data.</li>
-              <li><strong className="text-zinc-900 font-sans text-sm">Acquisition dependence:</strong> owner-sourced relationships ≥ 30% of revenue; loaded acquisition cost deviating ≥ 50% from cited channel benchmarks in either direction (unusually low is disclosed exactly as unusually high is).</li>
-              <li><strong className="text-zinc-900 font-sans text-sm">Operations:</strong> enterprise SOP coverage ratio below 60%; owner sole-contact relationships ≥ 25% of revenue or spend; any core workflow with zero documented procedure; any system with a single administrator.</li>
-              <li><strong className="text-zinc-900 font-sans text-sm">Governance:</strong> any cap-table entry without a matching issuance document; any related-party transaction without an approval record; any consent-to-sell requirement held by a non-signing party; any personal guarantee without documented release terms.</li>
-            </ul>
-          </section>
-
-          <hr className="border-zinc-200" />
-
-          <section id="section-11" className="scroll-mt-32">
-            <h2 className="text-3xl font-serif text-zinc-900 mb-6 tracking-tight">11. Reliance Framework</h2>
-            <div className="prose prose-zinc max-w-none text-zinc-700 font-light leading-relaxed">
-              <p>Because no deliverable under this standard is an assurance opinion, the question institutional readers rightly ask is: what happens, legally, if the file is wrong? The standard’s answer routes reliance through the party who owns the facts — the seller — with the Issuer’s process standing behind the verification itself:</p>
-              
-              <ul className="list-disc pl-5 space-y-4 mt-6">
-                <li><strong>The seller completeness representation.</strong> The supported reliance path is a representation by the seller, in the purchase agreement, that the records furnished for verification were complete and authentic and that the resulting file fairly reflects them — keyed to the file by version, date, and mark identifiers. This gives buyer, lender, and insurer a contractual hook with conventional indemnity mechanics, attached to the facts rather than to a professional’s opinion. Template language is published as Annex R (in counsel drafting at v2.2; non-normative until issued).</li>
-                <li><strong>The Verification Certificate.</strong> For each issued mark, the Issuer provides a certificate stating, as fact: the standard version applied, the procedures of Sections 5–9 performed, the tolerances met, the named human reviewer, the E-item schedule, and the verification dates. The certificate attests process conformity — never the business — and is the document the seller’s representation and an insurer’s underwriting file reference.</li>
-                <li><strong>Issuer accountability.</strong> The Issuer’s responsibility for performing the published procedures correctly is defined in engagement terms and backed by errors-and-omissions coverage; the revocation rule (Governance Charter) applies where underlying evidence is found false or materially incomplete, with notice to known recipients.</li>
-                <li><strong>Third-party recognition pathways.</strong> Lenders, representation-and-warranty insurers, and diligence providers may formally recognize the standard in their own guidelines (e.g., underwriting credit for marked files, scoped procedures over the census base). Recognition statements are published in the standard’s public registry as they are granted; none is claimed before it exists.</li>
-              </ul>
-            </div>
-          </section>
-
-          <hr className="border-zinc-200" />
-
-          {/* Section 12 is placed inside a highly visible block specifically requested in the prompt */}
-          <section id="section-12" className="scroll-mt-32">
-            <div className="bg-zinc-900 text-white p-10 md:p-14 shadow-xl">
-              <h2 className="text-3xl font-serif text-zinc-100 mb-8 tracking-tight border-b border-zinc-800 pb-6">12. Governance, Maintenance, and Open Items (The Governance Charter)</h2>
-              <div className="text-zinc-300 font-light leading-relaxed space-y-6">
-                <p className="text-lg">The Governance Charter of v1.0 Section 8 applies to every Part and every module mark without modification:</p>
-                <div className="grid md:grid-cols-2 gap-x-8 gap-y-4 font-mono text-sm tracking-wide bg-zinc-950 p-8 border border-zinc-800">
-                  <div className="flex items-center gap-3"><span className="text-zinc-500">→</span> No purchase of outcomes</div>
-                  <div className="flex items-center gap-3"><span className="text-zinc-500">→</span> No referrer influence</div>
-                  <div className="flex items-center gap-3"><span className="text-zinc-500">→</span> Separation of issuance from sales</div>
-                  <div className="flex items-center gap-3"><span className="text-zinc-500">→</span> Published versioned criteria</div>
-                  <div className="flex items-center gap-3"><span className="text-zinc-500">→</span> Factual appeals only</div>
-                  <div className="flex items-center gap-3"><span className="text-zinc-500">→</span> Revocation</div>
-                  <div className="flex items-center gap-3"><span className="text-zinc-500">→</span> Consent and custody</div>
-                  <div className="flex items-center gap-3"><span className="text-zinc-500">→</span> Independence of the record</div>
-                </div>
-                <p>Engagements complete under the version current at signing; module marks display their issuing version.</p>
-                
-                <h3 className="text-xl font-serif text-white tracking-tight mt-10 mb-4 border-t border-zinc-800 pt-8">Maintenance and Open Items</h3>
-                <p className="text-sm">Open items for v2.1, recorded for transparency: the v1.1 items (cash-revenue procedure, paper-record digitization prerequisite, industry value-dependencies, international equivalents) remain open and now apply across all Parts; the Function Taxonomy for area 25 requires publication as a normative annex; communications-metadata analysis in areas 18 and 26 requires a published privacy procedure and employee-notice guidance (partially addressed by Grade E reason codes R1/R4 and the Quiet Collection sequence; the affirmative-collection procedure remains open); benchmark-source eligibility (what counts as a citable third-party rate for areas 18, 21, 22, 23) requires a published source registry; the interaction between area 30 presence-facts and formal controls attestation frameworks requires a counsel-reviewed boundary note; Annex R (seller completeness representation template) requires counsel drafting before it becomes normative; and the third-party recognition registry (Section 11) requires its publication procedure.</p>
-              </div>
-            </div>
-            
-            <div className="mt-16 text-xs text-zinc-500 leading-relaxed font-mono border-t border-zinc-200 pt-8">
-              © 2026. This standard may be freely read, cited, quoted, and applied with attribution. Module marks and the Transaction-Grade™ designation may be used only on deliverables meeting Section 9 in full, issued under Section 12 governance. “Quality of Spend” is used here as the name of the spend-side verification discipline.
-            </div>
-          </section>
-
+          <pre className="px-3 py-3 text-[12px] leading-relaxed font-mono whitespace-pre-wrap text-slate-100">{item.source.lines.join("\n")}</pre>
+          {item.threshold !== "—" && <div className="border-t border-slate-700 px-3 py-2 text-[11px] text-slate-400">Trips: {item.threshold}</div>}
+          {item.recoverable && <div className="border-t border-slate-700 px-3 py-2 text-[11px] text-amber-300">Eligible for recovery — owner-directed, separate. The standard reports it; it never acts on it.</div>}
         </div>
       </div>
     </div>
   );
-};
-
-export default function App() {
-  const [currentPage, setCurrentPage] = useState<'home' | 'standard'>('home');
-
-  useEffect(() => {
-    const handleHash = () => {
-      const hash = window.location.hash;
-      if (hash.startsWith('#/standard')) {
-        setCurrentPage('standard');
-      } else {
-        setCurrentPage('home');
-      }
-    };
-    handleHash();
-    window.addEventListener('hashchange', handleHash);
-    return () => window.removeEventListener('hashchange', handleHash);
-  }, []);
-
-  const navToHomeHash = (hash: string) => (e: React.MouseEvent) => {
-    if (currentPage === 'standard') {
-      e.preventDefault();
-      window.location.hash = hash;
-    }
-  };
-
-  if (currentPage === 'standard') {
-    return (
-      <div className="min-h-screen bg-[#FCFCFC] font-sans text-zinc-900 flex flex-col selection:bg-zinc-200 selection:text-zinc-900">
-        <nav className="bg-white/95 backdrop-blur-sm border-b border-zinc-200 sticky top-0 z-50">
-          <div className="max-w-[1400px] mx-auto px-6 lg:px-12 h-24 flex items-center justify-between">
-            <a href="#/" onClick={(e) => { e.preventDefault(); window.location.hash = '/'; }} className="flex items-center gap-4 group">
-              <div className="w-8 h-8 bg-zinc-900 flex items-center justify-center transition-transform group-hover:scale-105">
-                <div className="w-2.5 h-2.5 bg-white"></div>
-              </div>
-              <span className="font-serif text-2xl tracking-wide text-zinc-900">Impact Surety</span>
-            </a>
-            <div className="hidden md:flex gap-12 text-[10px] uppercase tracking-[0.2em] font-semibold text-zinc-500">
-              <a href="#demo-factbook" onClick={navToHomeHash('#demo-factbook')} className="hover:text-zinc-900 transition-colors">Sample FactBook</a>
-              <a href="#/standard" className="text-zinc-900 transition-colors">The Standard</a>
-              <a href="#advisors" onClick={navToHomeHash('#advisors')} className="hover:text-zinc-900 transition-colors">For advisors</a>
-              <a href="#contact" onClick={navToHomeHash('#contact')} className="hover:text-zinc-900 transition-colors">Get started</a>
-            </div>
-          </div>
-        </nav>
-        <StandardPage />
-      </div>
-    );
-  }
-
-  // Home Page
+}
+function ScopeLine() {
+  return (<div className="mb-5 flex items-start gap-3 rounded-md border border-slate-200 bg-stone-50 px-4 py-3"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="mt-0.5 shrink-0 text-slate-500" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><div className="text-sm text-slate-600"><span className="font-medium text-slate-800">Scope is the owner’s choice.</span> What’s assessed, and what’s disclosed, is set by the seller — disclosed first, on their terms.<span className="ml-2 inline-flex items-center rounded-sm bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">Owner controls scope &amp; release · illustrative</span></div></div>);
+}
+function DemoFactBook() {
+  const [tab, setTab] = useState("cover");
+  const [showGloss, setShowGloss] = useState(false);
   return (
-    <div className="min-h-screen bg-[#FCFCFC] font-sans text-zinc-900 flex flex-col selection:bg-zinc-200 selection:text-zinc-900">
-      
-      {/* Premium Minimal Navigation */}
-      <nav className="bg-white/95 backdrop-blur-sm border-b border-zinc-200 sticky top-0 z-50">
-        <div className="max-w-[1400px] mx-auto px-6 lg:px-12 h-24 flex items-center justify-between">
-          <a href="#/" className="flex items-center gap-4">
-            <div className="w-8 h-8 bg-zinc-900 flex items-center justify-center">
-              <div className="w-2.5 h-2.5 bg-white"></div>
-            </div>
-            <span className="font-serif text-2xl tracking-wide text-zinc-900">Impact Surety</span>
-          </a>
-          <div className="hidden md:flex gap-12 text-[10px] uppercase tracking-[0.2em] font-semibold text-zinc-500">
-            <a href="#demo-factbook" className="hover:text-zinc-900 transition-colors">Sample FactBook</a>
-            <a href="#/standard" className="hover:text-zinc-900 transition-colors">The Standard</a>
-            <a href="#advisors" className="hover:text-zinc-900 transition-colors">For advisors</a>
-            <a href="#contact" className="hover:text-zinc-900 transition-colors">Get started</a>
-          </div>
-        </div>
-      </nav>
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="bg-amber-50 border-b border-amber-200 px-4 py-1.5 text-center text-[12px] text-amber-900">{LABEL}</div>
+      <div className="px-5 sm:px-7 pb-8">
+        <header className="flex items-center justify-between border-b border-slate-200 py-5">
+          <div><div className="text-[13px] font-semibold tracking-[0.2em] text-blue-950">IMPACT SURETY</div><div className="text-xs text-slate-500">The FactBook · verified facts, graded and sourced</div></div>
+          <button onClick={()=>setShowGloss(g=>!g)} className="text-xs text-slate-500 hover:text-blue-900 underline decoration-dotted underline-offset-4">What the grades mean</button>
+        </header>
+        {showGloss && (<div className="mt-3 rounded-md border border-slate-200 bg-stone-50 px-4 py-3 text-sm text-slate-600">{GRADE_GLOSS}<dl className="mt-3 space-y-1.5">{[["A","Third-party confirmed — independently re-checkable"],["B","Third-party documented — not independently re-confirmed"],["C","System of record — internally generated, consistency-tested"],["D","Management representation — asserted, minimal support"],["E","Not assessed — deliberately not gathered, reason-coded"]].map(([g,m])=>(<div key={g} className="flex items-center gap-2 text-[12px]"><span className={`inline-flex items-center justify-center w-6 h-5 rounded-sm font-mono text-[11px] ${(gradeChip as any)[g]}`}>{g}</span><span className="text-slate-600">{m}</span></div>))}</dl></div>)}
+        <nav className="mt-5 flex gap-1 overflow-x-auto border-b border-slate-200 pb-px">{TABS.map(t=>(<button key={t.key} onClick={()=>setTab(t.key)} className={`whitespace-nowrap px-3 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${tab===t.key?"border-amber-700 text-blue-950":"border-transparent text-slate-500 hover:text-slate-800"}`}>{t.label}</button>))}</nav>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-40 px-6 max-w-[1000px] mx-auto text-center border-b border-zinc-200">
-        <h1 className="text-5xl sm:text-6xl lg:text-7xl font-serif text-zinc-900 tracking-tight leading-[1.15] mb-12 max-w-4xl mx-auto text-balance">
-          In diligence, a buyer's accountant rebuilds your numbers from scratch and discounts everything they can't trace.
+        {tab==="cover" && (<section className="pt-7">
+          <div className="text-[11px] uppercase tracking-[0.2em] text-amber-700">FactBook · illustrative</div>
+          <h3 className="mt-1 text-2xl sm:text-3xl font-semibold text-blue-950">Northwind HVAC Services, LLC</h3>
+          <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-slate-600">Here is everything a buyer’s accountant will go looking for — already found, already sourced.</p>
+          <div className="mt-7 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-md border border-slate-200 p-4"><div className="text-[11px] uppercase tracking-wider text-slate-400">Mark</div><div className="mt-1 text-sm font-medium text-blue-950">Evidence-Complete (Part A)</div><div className="text-sm font-medium text-blue-950">Spend-Complete (Part B)</div><div className="text-xs text-slate-500">Parts C–D scoped</div></div>
+            <div className="rounded-md border border-slate-200 p-4"><div className="text-[11px] uppercase tracking-wider text-slate-400">Assessed Coverage</div><div className="mt-1 font-mono text-2xl text-blue-950">86%</div><div className="text-xs text-slate-500">the share of the records in scope that we verified</div></div>
+            <div className="rounded-md border border-slate-200 p-4"><div className="text-[11px] uppercase tracking-wider text-slate-400">Disclosed conditions</div><div className="mt-1 font-mono text-2xl text-blue-950">13</div><div className="text-xs text-slate-500">counted and evidenced · not rated</div></div>
+          </div>
+          <div className="mt-3 rounded-md border border-slate-200 p-4"><div className="flex items-center justify-between"><div className="text-[11px] uppercase tracking-wider text-slate-400">Readiness Score · Part A (Readiness Core)</div><div className="font-mono text-sm text-blue-950">91 / 100</div></div><div className="mt-2 h-2 w-full rounded-full bg-slate-200"><div className="h-2 rounded-full bg-blue-800" style={{width:"91%"}} /></div><div className="mt-1.5 text-xs text-slate-500">Completeness of the verified record — distance to Evidence-Complete. Not a rating of the business.</div></div>
+          <div className="mt-6 rounded-md border-l-2 border-slate-300 bg-stone-50 px-4 py-4"><div className="text-[11px] uppercase tracking-wider text-slate-400">The limit that makes this checkable</div><p className="mt-1.5 text-sm leading-relaxed text-slate-600">{LIMITS}</p><p className="mt-2 text-xs text-slate-500">Census means every record you give us — not a sample.</p></div>
+        </section>)}
+        {tab==="A" && (<section className="pt-6"><h3 className="text-lg font-semibold text-blue-950">Part A — Financial Record</h3><p className="mt-1 text-sm text-slate-500">Verified facts, each graded by how well the evidence backs it. Tap any row to open its source.</p><div className="mt-4">{partA.map(it=><FactRow key={it.id} item={it} />)}</div></section>)}
+        {tab==="B" && (<section className="pt-6"><h3 className="text-lg font-semibold text-blue-950">Part B — Quality of Spend</h3><p className="mt-1 text-sm text-slate-500">Where a fact is plainly recoverable, it is tagged. The standard reports it; recovery is owner-directed and handled separately — that gap is the wall.</p><div className="mt-4">{partB.map(it=><FactRow key={it.id} item={it} />)}</div></section>)}
+        {tab==="CD" && (<section className="pt-6"><h3 className="text-lg font-semibold text-blue-950">Parts C & D — Operations & Governance</h3><p className="mt-1 mb-4 text-sm text-slate-500">What was assessed, and — honestly — what was not.</p><ScopeLine /><div>{partCD.map(it=><FactRow key={it.id} item={it} />)}</div><h4 className="mt-7 text-sm font-semibold uppercase tracking-wider text-slate-500">Not assessed</h4><p className="mt-1 text-sm text-slate-500">Shown so the absence of a condition is never mistaken for the absence of a fact.</p><div className="mt-3 space-y-2">{gradeE.map(e=>(<div key={e.id} className="flex items-start gap-3 rounded-md border border-dashed border-slate-300 bg-white px-4 py-3"><span className={`mt-0.5 inline-flex items-center justify-center text-xs font-semibold rounded-sm w-7 h-7 font-mono ${gradeChip.E}`}>E</span><div><div className="text-[15px] text-slate-700">Not assessed — {e.fact}</div><div className="mt-1 text-xs text-slate-500">{e.reason} · {e.area}</div></div></div>))}</div></section>)}
+        {tab==="index" && (<section className="pt-6"><h3 className="text-lg font-semibold text-blue-950">Disclosed-Conditions Index</h3><p className="mt-1 text-sm italic text-slate-600">Conditions are counted and evidenced, never rated. Whether any condition matters is the reader’s judgment.</p><div className="mt-4 overflow-hidden rounded-md border border-slate-200">{indexLines.map((row,i)=>(<div key={row[0]} className={`flex items-center gap-3 px-4 py-2.5 text-sm ${i%2?"bg-stone-50":"bg-white"}`}><span className="w-9 shrink-0 font-mono text-xs text-slate-400">{row[0]}</span><span className="flex-1 text-slate-700">{row[1]}</span><span className="font-mono text-xs text-slate-500">{row[2]}</span></div>))}</div><div className="mt-3 flex items-center gap-2 text-xs text-slate-500"><span className="font-medium text-slate-600">Grade-E schedule</span><span className="font-mono">Not assessed: R1×1, R4×1, R5×1</span></div><div className="mt-9 rounded-md bg-blue-950 px-6 py-7 text-center text-white"><p className="mx-auto max-w-lg text-[17px] leading-relaxed">This is the record a buyer’s accountant would rebuild — already built, already sourced. There is nothing here left to find.</p><a href={CALENDAR_URL} target="_blank" rel="noopener noreferrer" className="mt-5 inline-block rounded-md bg-white px-5 py-2.5 text-sm font-medium text-blue-950 hover:bg-stone-100 transition-colors">See where your facts stand</a><p className="mt-3 text-xs text-blue-200">No pressure. One look is all it takes to start.</p></div></section>)}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Site chrome ---------------- */
+const scrollTo = (id: string) => { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior:"smooth", block:"start" }); };
+
+function Eyebrow({ children }: { children: React.ReactNode }) { return <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-amber-700">{children}</div>; }
+
+
+/* ---------------- The published Standard (ORS v2.4) ---------------- */
+function StdH({ n, children }: { n: string, children: React.ReactNode }) { return <h3 className="mt-8 text-sm font-semibold uppercase tracking-wider text-blue-950">{n}. {children}</h3>; }
+function StandardSection() {
+  const principles = ["Facts, not opinions","Census, not sampling","Source-linked","Published, not proprietary","Earned, not purchased"];
+  const grades = [
+    ["A","Third-party confirmed","Bank deposits & statements (direct feed); IRS transcripts; executed contracts; public lien/litigation/license records","Independently confirmable"],
+    ["B","Third-party documented","Filed tax returns as provided; payroll, processor & lessor statements; merchant/POS settlement","Documented externally; not independently re-confirmed"],
+    ["C","System of record","GL entries, accounting reports, internal POS, inventory & CRM","Internally generated; consistency-tested vs A/B"],
+    ["D","Management representation","Owner statements & estimates not yet supported by documents","Disclosed as unverified; flagged for the reader's diligence"],
+    ["E","Not assessed","Evidence deliberately not gathered, reason-coded R1–R5","Item-level, visible, never retroactive"],
+  ];
+  const limits = [
+    "Census means provided records, not reality — full-population verification covers 100% of the records provided and the sources authorized; it cannot establish that the record is the whole of reality.",
+    "What the methodology structurally narrows — Grade A bank-direct evidence and three-way reconciliation make many misstatements arithmetically visible.",
+    "What remains outside any records-based method — revenue never deposited, a parallel undisclosed entity, collusive schemes documented with genuine-looking paper, oral commitments, future events.",
+    "This is not a fraud examination and not assurance — no deliverable expresses an opinion or provides assurance; the Reliance Framework defines the supported path for legal weight.",
+  ];
+  const parts = [
+    ["Part A — Financial Record","areas 1–15","Proof of cash, revenue, margins, adjustments, related-party, working capital, debt, payroll, tax, contracts, legal"],
+    ["Part B — Spend Record (Quality of Spend)","areas 16–24","Vendor & payables forensics, owner-related spend, acquisition cost, commitment inventory, technology, insurance, facilities, labor, contingencies"],
+    ["Part C — Operational Record","areas 25–28","Procedure coverage, owner-time & dependence, systems & automation, key-relationship transferability"],
+    ["Part D — Governance Record","areas 29–32","Corporate record, authority & controls presence, related-party governance, transaction-governance readiness"],
+  ];
+  const marks = ["Evidence-Complete (A)","Spend-Complete (B)","Operations-Documented (C)","Governance-Complete (D)","Transaction-Grade (all four current)"];
+  const readiness = [["Evidence quality","40","Dollar-weighted share of figures at Grade A/B, scaled to the 85% floor"],["Scope completeness","30","Scope areas fully populated, 2 points each"],["Reconciliation integrity","30","Banded by aggregate unreconciled variance as a share of revenue"]];
+  const thresholds = [
+    "Duplicate or contract-variance payments ≥ 0.1% of annual spend; unapplied credits ≥ $10,000",
+    "Auto-renewing commitments ≥ 5% of annual spend; any take-or-pay obligation",
+    "Vendor concentration — any single vendor ≥ 20% of spend; related-party flows of any size",
+    "Owner-related spend candidates ≥ 10% of unadjusted earnings; owner-sourced relationships ≥ 30% of revenue",
+    "Enterprise SOP coverage below 60%; any core workflow with zero documented procedure; any system with a single administrator",
+    "Any cap-table entry without a matching issuance document; any consent-to-sell held by a non-signing party",
+  ];
+  const charter = ["No purchase of outcomes","No referrer influence","Separation of issuance from sales","Published, versioned criteria","Factual appeals only","Revocation where evidence is false or incomplete","Independence of the record"];
+
+  return (
+    <section id="standard" className="scroll-mt-20 border-y border-slate-200 bg-white">
+      <div className="mx-auto max-w-5xl px-5 py-14">
+        <Eyebrow>The published standard</Eyebrow>
+        <h2 className="mt-3 text-3xl font-semibold text-blue-950">The Open Readiness Standard</h2>
+        <p className="mt-1 text-sm text-slate-500">Version 2.4 — Public Draft for Comment · issued by Impact Surety, the Standard Issuer</p>
+        <p className="mt-4 max-w-3xl text-[15px] leading-relaxed text-slate-700">Don’t take our word for it. This is the method we verify against — open to read, cite, and apply. Every material fact about a business — what it earns, what it spends, how it runs, and how it is governed — is verified against source evidence across the entire population of records, graded for evidence quality, disclosed without judgment, and traceable from any reported number, clause, or procedure back to the document that supports it.</p>
+
+        <StdH n="1">Principles</StdH>
+        <div className="mt-2 flex flex-wrap gap-2">{principles.map(p=>(<span key={p} className="rounded-full border border-slate-300 px-3 py-1 text-sm text-slate-700">{p}</span>))}</div>
+
+        <StdH n="3">The Evidence Grade Scale (A–E)</StdH>
+        <p className="mt-1 text-sm text-slate-500">The grade describes the independence and reliability of the source — nothing more. No grade is a judgment: Grade D is not an accusation and Grade A is not an endorsement.</p>
+        <div className="mt-3 overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr className="border-b border-slate-300 text-[11px] uppercase tracking-wider text-slate-400"><th className="py-2 pr-3">Grade</th><th className="py-2 pr-3">Source class</th><th className="py-2 pr-3">Examples</th><th className="py-2">Reader treatment</th></tr></thead><tbody>{grades.map(([g,sc,ex,rt])=>(<tr key={g} className="border-b border-slate-100 align-top"><td className="py-2 pr-3"><span className={`inline-flex items-center justify-center w-7 h-6 rounded-sm font-mono text-[11px] ${(gradeChip as any)[g]}`}>{g}</span></td><td className="py-2 pr-3 font-medium text-slate-800">{sc}</td><td className="py-2 pr-3 text-slate-600">{ex}</td><td className="py-2 text-slate-600">{rt}</td></tr>))}</tbody></table></div>
+        <p className="mt-2 text-xs text-slate-500">Lowest-grade rule: a derived figure carries the grade of its weakest material input. Dollar-weighted coverage is reported in aggregate. Grade E is item-level, visible, reason-coded (R1–R5), and never retroactive.</p>
+
+        <StdH n="4">Limits of the Standard</StdH>
+        <ul className="mt-2 space-y-2">{limits.map((l,i)=>(<li key={i} className="text-sm leading-relaxed text-slate-600">{l}</li>))}</ul>
+        <p className="mt-2 text-xs italic text-slate-500">Stating these limits is not a hedge; it is the boundary that makes everything inside it checkable.</p>
+
+        <StdH n="5–6">The four Parts &amp; 32 scope areas</StdH>
+        <div className="mt-3 grid gap-3 md:grid-cols-2">{parts.map(([t,a,d])=>(<div key={t} className="rounded-md border border-slate-200 p-4"><div className="flex items-baseline justify-between"><div className="text-sm font-semibold text-blue-950">{t}</div><div className="font-mono text-[11px] text-slate-400">{a}</div></div><p className="mt-1 text-sm text-slate-600">{d}</p></div>))}</div>
+
+        <StdH n="9">Conformance &amp; module marks</StdH>
+        <div className="mt-2 flex flex-wrap gap-2">{marks.map(m=>(<span key={m} className="rounded-sm bg-stone-100 px-2.5 py-1 font-mono text-[12px] text-slate-700">{m}</span>))}</div>
+        <p className="mt-2 text-xs text-slate-500">Two tiers: Readiness Core (Part A) and Transaction Grade (Parts A–D). Marks attest the process, not the outcome — a business can be Evidence-Complete and still carry many disclosed conditions.</p>
+
+        <StdH n="7">The Readiness Score (Tier I — Readiness Core)</StdH>
+        <p className="mt-1 text-sm text-slate-500">A 0–100 score measuring how close the factual record is to the Evidence-Complete state — computed, not judged, and always shown beside its Assessed Coverage %.</p>
+        <div className="mt-3 overflow-hidden rounded-md border border-slate-200">{readiness.map(([c,p,how],i)=>(<div key={c} className={`flex items-start gap-3 px-4 py-2.5 text-sm ${i%2?"bg-stone-50":"bg-white"}`}><span className="font-mono text-xs text-slate-400 w-8 shrink-0">{p}</span><span className="font-medium text-slate-800 w-40 shrink-0">{c}</span><span className="text-slate-600">{how}</span></div>))}</div>
+        <div className="mt-3 rounded-md border-l-2 border-amber-700 bg-stone-50 px-4 py-3 text-sm text-slate-600"><span className="font-medium text-slate-800">Wall note.</span> The Readiness Score is a record-completeness metric — never a rating of the business. It is not the LeakFinder severity score or Diligence-Exposure Index, which live across the independence wall in a separate, broker-paid report and never appear in the FactBook. The standard issues facts, evidence grades, and a record-completeness score; it never issues a verdict on the business.</div>
+
+        <StdH n="8">Disclosed-Conditions Index — thresholds</StdH>
+        <p className="mt-1 text-sm text-slate-500">Mechanical, published thresholds, reported descriptively — counted and evidenced, never rated.</p>
+        <ul className="mt-2 grid gap-1.5 md:grid-cols-2">{thresholds.map((t,i)=>(<li key={i} className="text-sm text-slate-600">• {t}</li>))}</ul>
+
+        <StdH n="11">Reliance Framework</StdH>
+        <p className="mt-1 text-sm leading-relaxed text-slate-600">Because no deliverable is an assurance opinion, reliance routes through the party who owns the facts — the seller. The supported path is a seller completeness representation in the purchase agreement, keyed to the file, supported by the Issuer’s Verification Certificate (which attests process conformity, never the business), backed by E&amp;O coverage and a revocation rule. Lenders and insurers may recognize the standard in their own guidelines.</p>
+
+        <div className="mt-8 rounded-md bg-blue-950 px-6 py-5 text-white">
+          <div className="text-sm font-semibold uppercase tracking-wider">Governance Charter</div>
+          <p className="mt-1 text-sm text-blue-100">The independence the mark depends on — and the reason a broker can route to us without fear.</p>
+          <div className="mt-3 flex flex-wrap gap-2">{charter.map(c=>(<span key={c} className="rounded-full border border-blue-700 px-3 py-1 text-[13px] text-blue-50">{c}</span>))}</div>
+        </div>
+
+        <p className="mt-6 text-xs text-slate-400">© 2026 · This standard may be freely read, cited, quoted, and applied with attribution. Public Draft for Comment — comments welcome.</p>
+      </div>
+    </section>
+  );
+}
+
+export default function Site() {
+  return (
+    <div className="min-h-screen bg-white text-slate-900 font-sans">
+      {/* nav */}
+      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-3">
+          <div className="text-[13px] font-semibold tracking-[0.2em] text-blue-950">IMPACT SURETY</div>
+          <nav className="flex items-center gap-5 text-sm text-slate-600">
+            <button onClick={()=>scrollTo("demo")} className="hover:text-blue-900">Sample FactBook</button>
+            <button onClick={()=>scrollTo("standard")} className="hover:text-blue-900">The Standard</button>
+            <button onClick={()=>scrollTo("advisors")} className="hover:text-blue-900">For advisors</button>
+            <a href={CALENDAR_URL} target="_blank" rel="noopener noreferrer" className="inline-block rounded-md bg-blue-950 px-3 py-1.5 text-white hover:bg-blue-900">Book a look</a>
+          </nav>
+        </div>
+      </header>
+
+      {/* hero */}
+      <section className="mx-auto max-w-5xl px-5 pt-16 pb-14">
+        <Eyebrow>Sell on verified facts, not faith</Eyebrow>
+        <h1 className="mt-3 max-w-3xl text-4xl sm:text-5xl font-semibold leading-[1.1] text-blue-950">
+          In diligence, a buyer’s accountant rebuilds your numbers — and discounts everything they can’t trace.
         </h1>
-        <p className="text-xl sm:text-2xl text-zinc-600 mb-16 leading-relaxed max-w-3xl mx-auto font-light">
-          Impact Surety <span className="text-zinc-900 font-medium">verifies the facts of your business</span> against <a href="#/standard" className="underline hover:text-zinc-900 transition-colors underline-offset-4 pointer-events-auto">a published standard</a> before you list - so when that moment comes, there's nothing left for them to find.
+        <p className="mt-5 max-w-2xl text-lg leading-relaxed text-slate-600">
+          Impact Surety verifies the facts of your business against a published standard before you list — so when that moment comes, there’s nothing left for them to find.
         </p>
-        
-        <p className="text-3xl sm:text-4xl font-serif italic text-zinc-400 mb-20 text-balance">
-          You walk in already believed.
+        <p className="mt-4 text-xl font-medium text-blue-900">You walk in already believed.</p>
+        <p className="mt-3 max-w-2xl text-sm text-slate-500">
+          We verify the records you provide against a published standard, and we say exactly where that ends. You decide what’s verified and what’s disclosed — disclosed first, on your terms.
         </p>
-
-        <div className="flex flex-col items-center gap-10">
-          <a 
-            href="#demo-factbook"
-            className="inline-flex items-center justify-center px-12 py-5 text-[11px] uppercase tracking-[0.2em] font-bold text-white bg-zinc-900 hover:bg-zinc-800 transition-colors"
-          >
-            See a sample FactBook
-          </a>
-          
-          <div className="flex items-center gap-3 text-[14px] text-zinc-700 max-w-2xl text-center bg-white border border-zinc-200 px-6 py-4">
-            <ShieldCheck size={18} className="shrink-0 text-zinc-400" strokeWidth={1.5} />
-            <span className="font-mono text-xs uppercase tracking-widest text-zinc-800 leading-relaxed text-balance">
-              We verify the records you provide against <a href="#/standard" className="underline hover:text-zinc-500">a published standard</a>, and we say exactly where that ends.
-            </span>
-          </div>
-          
-          <p className="text-[15px] font-serif italic text-zinc-500 mt-2">
-            You decide what's verified and what's disclosed - disclosed first, on your terms.
-          </p>
+        <div className="mt-8 flex flex-wrap gap-3">
+          <button onClick={()=>scrollTo("demo")} className="rounded-md bg-blue-950 px-6 py-3 text-white font-medium hover:bg-blue-900 transition-colors">See a sample FactBook</button>
+          <button onClick={()=>scrollTo("advisors")} className="rounded-md border border-slate-300 px-6 py-3 font-medium text-slate-700 hover:border-slate-400 transition-colors">I’m an advisor</button>
+          <button onClick={()=>scrollTo("standard")} className="px-2 py-3 font-medium text-blue-900 hover:text-blue-700 underline decoration-dotted underline-offset-4">Read the published standard →</button>
         </div>
       </section>
 
-      {/* The Problem Section */}
-      <section id="problem" className="py-32 bg-white border-b border-zinc-200">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 grid md:grid-cols-12 gap-16 md:gap-24 items-start">
-          <div className="md:col-span-4">
-            <h2 className="text-[11px] uppercase tracking-[0.2em] font-semibold text-zinc-400 leading-relaxed md:pt-3">
-              The week-eleven <br/> diligence retrade
-            </h2>
-          </div>
-          <div className="md:col-span-8">
-            <p className="text-3xl md:text-4xl text-zinc-900 leading-snug font-serif tracking-tight text-balance">
-              When late, unverified facts surface in diligence, trust breaks down. Buyers discount the unknown, and you pay the price for records that weren't proven before you went to market. A home inspection protects a house transaction - but for the business you built, you're expected to cross your fingers and brace for the exam.
-            </p>
+      {/* problem */}
+      <section className="border-y border-slate-200 bg-stone-50">
+        <div className="mx-auto max-w-5xl px-5 py-14">
+          <Eyebrow>The week-eleven retrade</Eyebrow>
+          <div className="mt-4 grid gap-8 md:grid-cols-2 md:items-center">
+            <p className="text-2xl font-medium leading-snug text-blue-950">The deal you counted as closed starts coming undone — over a fact you couldn’t prove fast enough.</p>
+            <p className="text-[15px] leading-relaxed text-slate-600">It’s week eleven. The letter of intent is signed and the deal is in your plans — and the buyer’s accountant asks for one more thing you can’t prove on demand. A number you knew was right becomes a discount, taken after your leverage is gone. The villain isn’t your business. It’s the late, unverified fact.</p>
           </div>
         </div>
       </section>
 
-      {/* Three Products Section */}
-      <section id="products" className="py-32 md:py-40 bg-[#fafafa] border-b border-zinc-200">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12">
-          <div className="grid md:grid-cols-12 gap-16 md:gap-24 mb-24 md:mb-32">
-            <div className="md:col-span-4">
-              <h2 className="text-[11px] uppercase tracking-[0.2em] font-semibold text-zinc-400 leading-relaxed md:pt-3">A verified-truth platform</h2>
+      {/* three products */}
+      <section className="mx-auto max-w-5xl px-5 py-14">
+        <Eyebrow>What we do</Eyebrow>
+        <h2 className="mt-3 text-3xl font-semibold text-blue-950">Truth you can check. Action on the checkable. Independent where it counts.</h2>
+        <div className="mt-8 grid gap-5 md:grid-cols-3">
+          {[
+            ["FactBook + Certification","The verified factual record of your business — graded against a published standard and linked to source. The proof, before anyone asks for it."],
+            ["Clawback","Where waste is a provable fact — a duplicate, an unapplied credit — we recover it, at your direction. The standard finds it; recovery is separate."],
+            ["SpendSentry","Keeps the record current after close — monitoring and preventing waste as you run leaner."],
+          ].map(([t,d])=>(
+            <div key={t} className="rounded-xl border border-slate-200 p-6">
+              <div className="text-lg font-semibold text-blue-950">{t}</div>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">{d}</p>
             </div>
-            <div className="md:col-span-8">
-              <p className="text-3xl md:text-4xl text-zinc-900 font-serif leading-snug tracking-tight text-balance">
-                Truth you can check, action on the checkable, and independent where it counts. We work alongside your advisor, never instead of them.
-              </p>
-            </div>
+          ))}
+        </div>
+        <p className="mt-6 text-sm text-slate-500">Working with a broker or M&amp;A advisor? <span className="text-slate-700">We work alongside them, never instead of them.</span></p>
+      </section>
+
+      {/* demo (centerpiece) */}
+      <section id="demo" className="scroll-mt-20 border-y border-slate-200 bg-stone-50">
+        <div className="mx-auto max-w-5xl px-5 py-14">
+          <div className="mx-auto max-w-3xl text-center">
+            <Eyebrow>See the work</Eyebrow>
+            <h2 className="mt-3 text-3xl font-semibold text-blue-950">A sample FactBook</h2>
+            <p className="mt-3 text-[15px] leading-relaxed text-slate-600">Tap any fact to open the record behind it — the invoice, the bank line, the clause. This is what a buyer’s accountant would otherwise rebuild from scratch.</p>
           </div>
+          <div className="mx-auto mt-8 max-w-3xl"><DemoFactBook /></div>
+        </div>
+      </section>
 
-          <div className="grid md:grid-cols-3 gap-12 md:gap-16">
-            <div className="group">
-              <h3 className="text-2xl font-serif text-zinc-900 mb-6 tracking-tight border-b border-zinc-200 pb-6">FactBook + Certification</h3>
-              <p className="text-base text-zinc-600 leading-loose font-light">
-                <strong className="text-zinc-900 font-medium">Truth you can check.</strong> We verify your historical records against <a href="#/standard" className="text-zinc-900 underline hover:text-zinc-600">a published standard</a>. Every fact is graded and source-linked, establishing completeness and trace to source.
-              </p>
-            </div>
-            
-            <div className="group">
-              <h3 className="text-2xl font-serif text-zinc-900 mb-6 tracking-tight border-b border-zinc-200 pb-6 flex items-end justify-between">
-                <span>Clawback</span>
-                <span className="text-[10px] pb-1.5 uppercase tracking-widest font-sans font-semibold text-zinc-400">owner-directed</span>
-              </h3>
-              <p className="text-base text-zinc-600 leading-loose font-light">
-                <strong className="text-zinc-900 font-medium">Action on the checkable.</strong> Where waste is a provable fact - like a duplicate payment - we recover and prevent it, entirely at your direction.
-              </p>
-            </div>
+      {/* why this exists (founder's why — after the work, before the exhale) */}
+      <section className="mx-auto max-w-5xl px-5 py-14">
+        <div className="mx-auto max-w-2xl">
+          <Eyebrow>Why this exists</Eyebrow>
+          <p className="mt-4 text-[15px] leading-relaxed text-slate-600">I grew up in Bethlehem, Pennsylvania as the steel mills went down. When the company failed, the pension system protected the men at the top and abandoned the ones who had done the actual work — people who did everything they were told, disbelieved and discarded by a system built that way. I’ve spent my career since giving smaller companies the tools the largest ones keep for themselves.</p>
+          <p className="mt-5 border-l-2 border-amber-700 pl-4 text-lg font-medium leading-snug text-blue-950">I built Impact Surety so the business you gave your life to doesn’t have to fight to be believed at the one moment it matters most — when you sell it.</p>
+        </div>
+      </section>
 
-            <div className="group">
-              <h3 className="text-2xl font-serif text-zinc-900 mb-6 tracking-tight border-b border-zinc-200 pb-6">SpendSentry</h3>
-              <p className="text-base text-zinc-600 leading-loose font-light">
-                <strong className="text-zinc-900 font-medium">Independent where it counts.</strong> The truth layer never profits from what the facts say, never opines on what they mean, and never competes with the advisor who brought the deal. See our <a href="#/standard#section-12" className="underline text-zinc-900 hover:text-zinc-600">Governance Charter</a>.
-              </p>
+      {/* what this changes (exhale) */}
+      <section className="border-y border-slate-200 bg-blue-950 text-white">
+        <div className="mx-auto max-w-5xl px-5 py-16 text-center">
+          <p className="mx-auto max-w-2xl text-2xl sm:text-3xl font-medium leading-snug">When the facts are already proven and sourced, diligence stops being an exam you brace for. There’s nothing left to discover, because you disclosed it first, on your terms.</p>
+          <p className="mt-5 text-xl text-blue-100">You go to market believed.</p>
+          <p className="mx-auto mt-6 max-w-xl text-xs leading-relaxed text-blue-300">We verify 100% of the records you provide against a published standard, and we say exactly where that ends — not a fraud examination, not an assurance opinion. Stating the limit is what makes everything inside it checkable.</p>
+        </div>
+      </section>
+
+      {/* for advisors */}
+      <section id="advisors" className="scroll-mt-20 mx-auto max-w-5xl px-5 py-14">
+        <Eyebrow>For brokers & M&amp;A advisors</Eyebrow>
+        <h2 className="mt-3 max-w-3xl text-3xl font-semibold text-blue-950">Be the most-prepared person in the room — and keep the relationship.</h2>
+        <div className="mt-5 grid gap-8 md:grid-cols-2">
+          <div className="space-y-4 text-[15px] leading-relaxed text-slate-600">
+            <p>The deal you counted as closed can come undone in week eleven of diligence — and the listing you lose is often the one where a better-prepared advisor walked in with something you didn’t have.</p>
+            <p>Impact Surety surfaces what the buyer’s accountant will find, before you list — so the deal you counted on holds, the standard carries the hard findings, and you keep the relationship. You’re the one who showed up certain.</p>
+            <p className="text-slate-700">The advisor’s hardening tool — the LeakFinder report (severity, recommended handling, a Diligence-Exposure Index) — is yours. The relationship and the value stay with you after the FactBook closes.</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-stone-50 p-6">
+            <div className="text-sm font-semibold uppercase tracking-wider text-blue-950">What we will never do</div>
+            <ul className="mt-3 space-y-2 text-[15px] text-slate-700">
+              <li>We never contact your buyer.</li>
+              <li>We never solicit your seller.</li>
+              <li>We take no success fee, and we don’t market businesses.</li>
+              <li>We hold no license to represent either side.</li>
+            </ul>
+            <p className="mt-3 text-sm text-slate-600">We can’t become your competitor — that’s the point. You control disclosure; the seller decides what is put forward, and to whom.</p>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <a href={CALENDAR_URL} target="_blank" rel="noopener noreferrer" className="inline-block rounded-md bg-blue-950 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-900">See it on one of your deals</a>
+              <button onClick={()=>scrollTo("demo")} className="rounded-md border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:border-slate-400">Sample to forward</button>
             </div>
+            <p className="mt-2 text-xs text-slate-500">Your cost, under NDA, no strings.</p>
           </div>
         </div>
       </section>
 
-      {/* Demo Section */}
-      <section className="py-32 md:py-40 bg-[#f4f4f4] border-b border-zinc-200">
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20 md:mb-32">
-            <h2 className="text-4xl md:text-5xl font-serif text-zinc-900 tracking-tight">The inspection before you sell</h2>
-            <p className="text-xl text-zinc-500 mt-8 max-w-2xl mx-auto font-light leading-relaxed">Explore a sample verification. Every fact is traceable, every condition is disclosed first, and you maintain complete control over scope.</p>
-          </div>
-          
-          <FactBookDemo />
-        </div>
-      </section>
+      {/* the published standard */}
+      <StandardSection />
 
-      {/* Why This Exists */}
-      <section className="py-32 md:py-40 bg-zinc-50 border-b border-zinc-200">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 grid md:grid-cols-12 gap-16 md:gap-24">
-          <div className="md:col-span-4">
-            <h2 className="text-[11px] uppercase tracking-[0.2em] font-semibold text-zinc-400 md:pt-3">Why this exists</h2>
-          </div>
-          
-          <div className="md:col-span-8 space-y-12">
-            <p className="text-2xl text-zinc-600 font-light leading-relaxed text-balance">
-              I grew up in Bethlehem, Pennsylvania as the steel mills went down. When the company failed, the pension system protected the men at the top and abandoned the ones who had done the actual work - people who did everything they were told, disbelieved and discarded by a system built that way. I've spent my career since giving smaller companies the tools the largest ones keep for themselves.
-            </p>
-            
-            <p className="text-3xl md:text-4xl font-serif text-zinc-900 leading-snug pt-12 border-t border-zinc-200 text-balance">
-              I built Impact Surety so the business you gave your life to doesn't have to fight to be believed at the one moment it matters most - when you sell it.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* The Exhale */}
-      <section className="py-40 bg-white border-b border-zinc-200">
-        <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-serif text-zinc-900 leading-[1.1] tracking-tight mb-12 max-w-3xl mx-auto text-balance">
-            When the facts are already proven and sourced, diligence stops being an exam you brace for.
-          </h2>
-          <p className="text-2xl md:text-3xl text-zinc-500 mb-20 font-light text-balance">
-            There's nothing left to discover, because you disclosed it first, on your terms. 
-            <span className="font-serif italic text-zinc-900 block mt-8 text-3xl md:text-4xl">You go to market believed.</span>
-          </p>
-
-          <div className="inline-flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-zinc-600 bg-[#fafafa] border border-zinc-200 py-6 px-10 mx-auto">
-            <div className="flex items-center gap-4">
-              <ShieldCheck size={20} className="text-zinc-400 shrink-0" strokeWidth={1.5} />
-              <span className="font-medium text-zinc-900 tracking-wide uppercase text-[10px] font-mono leading-relaxed max-w-lg text-balance">We verify the records you provide against <a href="#/standard" className="underline hover:text-zinc-500">a published standard</a>, and we say exactly where that ends.</span>
+      {/* data handling */}
+      <section className="border-y border-slate-200 bg-stone-50">
+        <div className="mx-auto max-w-5xl px-5 py-14">
+          <Eyebrow>How your data is handled</Eyebrow>
+          <div className="mt-4 grid gap-8 md:grid-cols-2">
+            <div className="text-[15px] leading-relaxed text-slate-600">
+              <p>Under NDA. De-identified on arrival with Microsoft Presidio, run locally; analysis on anonymized data only; the raw copy is destroyed after.</p>
+              <p className="mt-3 font-medium text-slate-800">Your identity is protected throughout, and engaging us creates no external signal that your business is for sale.</p>
+              <p className="mt-3 text-sm text-slate-500">We describe what we do. We make no certified or attested claim — the description is the thing you can check.</p>
+            </div>
+            <div className="space-y-3">
+              {[
+                ["Who sees my raw files?","De-identified on arrival via Presidio, run locally; analysis is on anonymized data; access is limited; the raw copy is destroyed after."],
+                ["Where does my data live?","Processed privately, and not shared with third parties."],
+                ["What if something goes wrong?","We work NDA-first and tell you plainly what we do and don’t do; we make no assurance claim."],
+              ].map(([q,a])=>(
+                <div key={q} className="rounded-md border border-slate-200 bg-white p-4"><div className="text-sm font-medium text-blue-950">{q}</div><p className="mt-1 text-sm text-slate-600">{a}</p></div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* For Advisors / Brokers */}
-      <section id="advisors" className="py-32 md:py-40 bg-[#fafafa] border-b border-zinc-200">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12">
-          <div className="grid md:grid-cols-2 gap-20 md:gap-32">
-            <div>
-              <div className="uppercase tracking-[0.2em] text-[11px] font-semibold text-zinc-400 mb-8 border-b border-zinc-200 pb-6 inline-block">For M&A Advisors & Brokers</div>
-              <h2 className="text-4xl md:text-5xl font-serif text-zinc-900 mb-10 tracking-tight leading-tight text-balance">Arm your client with verified facts.</h2>
-              <p className="text-xl text-zinc-600 font-light leading-relaxed mb-16">
-                You build the narrative; we verify the facts your judgment stands on. We arm you and your client with a verified FactBook, so you control the deal timeline from day one, safe from late-stage retrades. A LeakFinder report keeps you in the chain if any uncontracted outreach occurs.
-              </p>
-              
-              <div className="border border-zinc-200 bg-white p-12 mb-16">
-                <h3 className="font-serif text-2xl text-zinc-900 mb-6 tracking-tight">
-                  Channel Safety
-                </h3>
-                <p className="text-base text-zinc-600 leading-loose font-light">
-                  We verify facts and conclude nothing. The truth layer never profits from what the facts say, never opines on what they mean, and never competes with the advisor who brought the deal. <strong className="font-medium text-zinc-900">We work alongside your advisor, never instead of them.</strong> See our <a href="#/standard#section-12" className="underline text-zinc-900 hover:text-zinc-600">published Governance Charter</a>.
-                </p>
-              </div>
-
-              <a href="#contact" className="text-zinc-900 font-[11px] uppercase tracking-[0.2em] font-semibold hover:text-zinc-500 transition-colors flex items-center gap-4 group">
-                Partner with us to verify your next listing <ArrowRight size={16} className="group-hover:translate-x-2 transition-transform" strokeWidth={1.5} />
-              </a>
-            </div>
-            
-            <div className="bg-zinc-900 text-white p-12 md:p-20 flex items-center">
-               <blockquote className="text-3xl md:text-4xl font-serif italic text-zinc-300 leading-relaxed text-balance">
-                 "A buyer's accountant uses unverified numbers to grind price. When the facts are verified before you list, that leverage disappears."
-               </blockquote>
-            </div>
-          </div>
+      {/* contact */}
+      <section id="contact" className="scroll-mt-20 mx-auto max-w-5xl px-5 py-16 text-center">
+        <h2 className="text-3xl font-semibold text-blue-950">See where your facts stand.</h2>
+        <p className="mt-3 text-[15px] text-slate-600">No pressure. One look is all it takes to start.</p>
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
+          <button onClick={()=>scrollTo("demo")} className="rounded-md bg-blue-950 px-6 py-3 font-medium text-white hover:bg-blue-900">See a sample FactBook</button>
+          <a href={CALENDAR_URL} target="_blank" rel="noopener noreferrer" className="rounded-md border border-slate-300 px-6 py-3 font-medium text-slate-700 hover:border-slate-400">Book a conversation</a>
         </div>
       </section>
 
-      {/* Data Security FAQ */}
-      <section className="py-32 bg-white border-b border-zinc-200">
-        <div className="max-w-[1200px] mx-auto px-6 lg:px-12 grid lg:grid-cols-12 gap-16 lg:gap-24">
-          <div className="lg:col-span-4">
-            <div className="sticky top-32">
-              <Lock size={24} className="text-zinc-400 mb-8" strokeWidth={1} />
-              <h2 className="text-[11px] uppercase tracking-[0.2em] font-semibold text-zinc-400 mb-8">
-                How your data is handled
-              </h2>
-              <p className="text-zinc-800 font-serif italic text-2xl md:text-3xl leading-relaxed text-balance mb-8">
-                We work NDA-first. Your identity is protected throughout, and engaging us creates no external signal that your business is for sale.
-              </p>
-              <p className="text-zinc-600 font-light leading-relaxed">
-                Verification happens privately, on de-identified data; you decide if and when anything is shared.
-              </p>
-            </div>
-          </div>
-          
-          <div className="lg:col-span-8">
-            <div className="grid sm:grid-cols-2 gap-12 sm:gap-16 pt-8 lg:pt-0">
-              <div>
-                <h3 className="text-2xl font-serif text-zinc-900 mb-6 tracking-tight">Who sees my raw files?</h3>
-                <p className="text-zinc-600 font-light leading-relaxed text-lg text-balance">
-                  De-identified on arrival with Microsoft Presidio, run locally; analysis is on anonymized data; access is limited; the raw copy is destroyed after.
-                </p>
-              </div>
-              
-              <div>
-                <h3 className="text-2xl font-serif text-zinc-900 mb-6 tracking-tight">Where does my data live?</h3>
-                <p className="text-zinc-600 font-light leading-relaxed text-lg text-balance">
-                  Processed privately; not shared with third parties.
-                </p>
-              </div>
-              
-              <div className="sm:col-span-2 pt-8 sm:pt-16 sm:border-t border-zinc-200">
-                <h3 className="text-2xl font-serif text-zinc-900 mb-6 tracking-tight">What if something goes wrong?</h3>
-                <p className="text-zinc-600 font-light leading-relaxed text-lg max-w-3xl text-balance">
-                  We work NDA-first and tell you plainly what we do and don't do; we make no assurance claim. We maintain standard cybersecurity and incident response practices appropriate for processing confidential enterprise records.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA / Contact */}
-      <section id="contact" className="py-32 md:py-48 bg-[#fafafa] text-center border-b border-zinc-200">
-        <div className="max-w-3xl mx-auto px-6 lg:px-8">
-          <h2 className="text-5xl md:text-6xl font-serif text-zinc-900 mb-8 tracking-tight">See where your facts stand.</h2>
-          <p className="text-2xl text-zinc-500 mb-16 font-light">A confidential conversation about verifying your records before you sell.</p>
-          <a 
-            href="mailto:contact@impactsurety.com"
-            className="inline-flex items-center justify-center px-16 py-6 text-[11px] uppercase tracking-[0.2em] font-bold text-white bg-zinc-900 hover:bg-black transition-colors"
-          >
-            Contact us securely
-          </a>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-zinc-900 text-zinc-400 py-32 mt-auto">
-        <div className="max-w-[1200px] mx-auto px-6 lg:px-12 grid md:grid-cols-12 gap-16 md:gap-24">
-          <div className="md:col-span-8 bg-[#111] border border-zinc-800 p-8 md:p-12 text-left">
-            <h4 className="text-[11px] uppercase tracking-[0.2em] font-semibold text-zinc-500 mb-8 flex items-center gap-4">
-              <Info size={16} strokeWidth={1.5} />
-              Limits of Verification
-            </h4>
-            <div className="space-y-6 text-sm font-light leading-relaxed">
-              <p>
-                <strong className="text-zinc-200 font-medium tracking-wide">Census means provided records, not reality.</strong> <span className="inline-block md:ml-1 text-zinc-500 italic font-serif">Gloss: Census means every record you give us - not a sample.</span>
-              </p>
-              <p className="text-zinc-400">
-                We verify 100% of the records you provide and the sources you authorize - establishing their completeness, consistency, and traceability to source. We are not a fraud examination and not an assurance opinion. Stating this limit is the boundary that makes everything inside it checkable.
-              </p>
-              <p className="text-zinc-500 pt-6 border-t border-zinc-800 italic font-serif">
-                We verify facts and conclude nothing. Advisory, not a reliance opinion.
-              </p>
-            </div>
-          </div>
-          
-          <div className="md:col-span-4 flex flex-col justify-between">
-             <div className="space-y-6 text-[11px] uppercase tracking-[0.2em] font-semibold text-zinc-500">
-                <a href="#/standard" className="block hover:text-white transition-colors">The Standard</a>
-                <a href="#" className="block hover:text-white transition-colors">Privacy</a>
-                <a href="#" className="block hover:text-white transition-colors">Terms</a>
-             </div>
-             
-             <div className="mt-20 md:mt-0 text-[11px] uppercase tracking-[0.2em] font-semibold text-zinc-600">
-                &copy; {new Date().getFullYear()} Impact Surety.<br/>All rights reserved.
-             </div>
-          </div>
-        </div>
+      {/* footer */}
+      <footer className="border-t border-slate-200 bg-white px-5 py-8 text-center">
+        <p className="text-sm text-slate-600">We verify facts and conclude nothing. Advisory, not a reliance opinion.</p>
+        <p className="mx-auto mt-2 max-w-2xl text-xs leading-relaxed text-slate-400">Census means provided records, not reality — we verify the records you provide and the sources you authorize, and we are not a fraud examination or an assurance opinion.</p>
+        <p className="mt-3 text-[11px] text-slate-400">© Impact Surety · Be sure. · [contact details to be added before field use]</p>
       </footer>
     </div>
   );
